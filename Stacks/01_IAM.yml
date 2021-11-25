@@ -51,6 +51,8 @@ Resources:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
+              - ssm:GetParameter
+              - ssm:UpdateInstanceInformation
             Resource: "*"
   ECSRole:
     Type: AWS::IAM::Role
@@ -69,23 +71,25 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-              - 'ecs:CreateCluster'
-              - 'ecs:DeregisterContainerInstance'
-              - 'ecs:DiscoverPollEndpoint'
-              - 'ecs:Poll'
-              - 'ecs:RegisterContainerInstance'
-              - 'ecs:StartTelemetrySession'
-              - 'ecs:Submit*'
-              - 'cloudwatch:PutMetricData'
-              - 'logs:PutLogEvents'
-              - 'logs:DescribeLogStreams'
-              - 'logs:DescribeLogGroups'
-              - 'logs:CreateLogGroup'
-              - 'logs:CreateLogStream'
-              - 'ecr:BatchCheckLayerAvailability'
-              - 'ecr:BatchGetImage'
-              - 'ecr:GetDownloadUrlForLayer'
-              - 'ecr:GetAuthorizationToken'
+              - ecs:CreateCluster
+              - ecs:DeregisterContainerInstance
+              - ecs:DiscoverPollEndpoint
+              - ecs:Poll
+              - ecs:RegisterContainerInstance
+              - ecs:StartTelemetrySession
+              - ecs:Submit*
+              - cloudwatch:PutMetricData
+              - logs:PutLogEvents
+              - logs:DescribeLogStreams
+              - logs:DescribeLogGroups
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - ecr:BatchCheckLayerAvailability
+              - ecr:BatchGetImage
+              - ecr:GetDownloadUrlForLayer
+              - ecr:GetAuthorizationToken
+              - ssm:GetParameter
+              - ssm:UpdateInstanceInformation
             Resource: '*'
   ECSTaskRole:
     Type: AWS::IAM::Role

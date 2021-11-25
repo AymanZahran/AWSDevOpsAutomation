@@ -229,68 +229,24 @@ Resources:
               amazon-cloudwatch-agent: []
         # Definition of json configuration of AmazonCloudWatchAgent, you can change the configuration below.
         06_config-amazon-cloudwatch-agent:
-          files:
-            '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json':
-              content: !Sub |
-                {
-                  "agent": {
-                    "metrics_collection_interval": 10,
-                    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-                    "region": "${AWS::Region}",
-                    "run_as_user": "root"
-                  },
-                  "metrics": {
-                    "namespace": "CWAgent",
-                    "metrics_collected": {
-                      "mem": {
-                        "measurement": [
-                          "mem_used",
-                          "mem_cached",
-                          "mem_total"
-                        ],
-                        "metrics_collection_interval": 1
-                      }
-                    },
-                    "force_flush_interval" : 30
-                  },
-                  "logs": {
-                    "logs_collected": {
-                      "files": {
-                        "collect_list": [
-                          {
-                            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-                            "log_group_name": "CloudWatchAgentLogs",
-                            "log_stream_name": "CloudWatchAgentLogs",
-                            "timezone": "UTC"
-                          },
-                          {
-                            "file_path": "/var/log/httpd/access_log",
-                            "log_group_name": "HTTPAccessLogs",
-                            "log_stream_name": "HTTPAccessLogs",
-                            "timezone": "UTC"
-                          },
-                          {
-                            "file_path": "/var/log/aws/codedeploy-agent/codedeploy-agent.log",
-                            "log_group_name": "CodeDeployAgentLogs",
-                            "log_stream_name": "CodeDeployAgentLogs",
-                            "timezone": "UTC"
-                          }
-                        ]
-                      }
-                    },
-                    "log_stream_name": "dummy_stream_name",
-                    "force_flush_interval" : 15
-                  }
-                }
-              mode: "000644"
+          commands:
+            01_config-amazon-cloudwatch-agent:
+              command: 
+                Fn::Sub:
+                - |
+                  /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ssmkey} -s
+                - { ssmkey: !ImportValue WebInstancesSSM }
         # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
         07_restart_amazon-cloudwatch-agent:
           commands:
             01_stop_service:
               command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
             02_start_service:
-              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json -s
-        
+              command: 
+                Fn::Sub:
+                  - |
+                    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ssmkey} -s
+                  - { ssmkey: !ImportValue WebInstancesSSM }
 
   EC2ASG:
     Type: AWS::AutoScaling::AutoScalingGroup

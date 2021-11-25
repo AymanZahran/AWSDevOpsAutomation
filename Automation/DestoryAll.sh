@@ -8,9 +8,7 @@ CodeCommitRepoName="codecommit-repo-$ACCOUNT_ID"
 ECRRepoName="ecr-repo-$ACCOUNT_ID"
 
 aws ecr delete-repository --repository-name $ECRRepoName --force
-# python3 DestroyBucketObjects.py
-# python3 DestroyBucketObjects.py
-# python3 DestroyBucketObjects.py
+python3 DestroyBucketObjects.py
 aws s3 rb s3://$StacksBucketName --force
 aws s3 rb s3://$CloudTrailBucketName --force
 aws s3 rb s3://$ArtifactsBucketName --force

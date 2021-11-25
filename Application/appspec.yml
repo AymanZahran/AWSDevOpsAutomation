@@ -4,6 +4,11 @@ files:
   - source: /index.html
     destination: /var/www/html/
 hooks:
+  AfterBlockTraffic:
+    - location: scripts/after_blocktraffic.sh
+      timeout: 300
+      runas: root
+
   ApplicationStop:
     - location: scripts/application_stop.sh
       timeout: 300
