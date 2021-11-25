@@ -1,0 +1,453 @@
+Parameters:
+  KeyPair:
+    Description: KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: "AWS_KeyPair"
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - c1.medium
+      - c1.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c3.large
+      - c3.xlarge
+      - cc2.8xlarge
+      - cg1.4xlarge
+      - cr1.8xlarge
+      - g2.2xlarge
+      - hi1.4xlarge
+      - hs1.8xlarge
+      - i2.2xlarge
+      - i2.4xlarge
+      - i2.8xlarge
+      - i2.xlarge
+      - m1.large
+      - m1.medium
+      - m1.small
+      - m1.xlarge
+      - m2.2xlarge
+      - m2.4xlarge
+      - m2.xlarge
+      - m3.2xlarge
+      - m3.large
+      - m3.medium
+      - m3.xlarge
+      - r3.2xlarge
+      - r3.4xlarge
+      - r3.8xlarge
+      - r3.large
+      - r3.xlarge
+      - t1.micro
+      - t2.medium
+      - t2.micro
+      - t2.small
+    Description: Instance Type
+
+Mappings:
+  AmznLinux2AMIRegionMap:
+    ap-northeast-1:
+      AMIID: ami-02d36247c5bc58c23
+    ap-northeast-2:
+      AMIID: ami-04e8dfc09b22389ad
+    ap-northeast-3:
+      AMIID: ami-026107638e7d599b1
+    ap-south-1:
+      AMIID: ami-041db4a969fe3eb68
+    ap-southeast-1:
+      AMIID: ami-07191cf2912e097a6
+    ap-southeast-2:
+      AMIID: ami-04a81599b183d7908
+    ca-central-1:
+      AMIID: ami-0d8ad3ab25e7abc51
+    eu-central-1:
+      AMIID: ami-047e03b8591f2d48a
+    eu-north-1:
+      AMIID: ami-001c5f3c0a8b3f245
+    eu-west-1:
+      AMIID: ami-0ed961fa828560210
+    eu-west-2:
+      AMIID: ami-074771aa49ab046e7
+    eu-west-3:
+      AMIID: ami-0da7ba92c3c072475
+    sa-east-1:
+      AMIID: ami-07983613af1a3ef44
+    us-east-1:
+      AMIID: ami-01cc34ab2709337aa
+    us-east-2:
+      AMIID: ami-0f19d220602031aed
+    us-west-1:
+      AMIID: ami-0e0bf4b3a0c0e0adc
+    us-west-2:
+      AMIID: ami-0e5b6b6a9f3db6db8
+
+Resources:
+  NATInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !ImportValue NATRole
+  NATLaunchTemplate1:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap [AmznLinux2AMIRegionMap, !Ref "AWS::Region", AMIID]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt NATInstanceProfile.Arn
+        KeyName: !Ref KeyPair
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            Groups:
+              - !ImportValue NATSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: NATInstances1
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            pip3 install --upgrade awscli
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate1 --configsets Initial
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource NATASG1
+      LaunchTemplateName: "NATLaunchTemplate1"
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: NATLaunchTemplate1
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          Initial:
+            - 01_setupCfnHup
+            - 02_setup-jq
+            - 03_setup-NAT
+          Update:
+            - 03_setup-NAT
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        01_setupCfnHup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.NATLaunchTemplate1.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate1 --configsets Update
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services: 
+            sysvinit:
+              cfn-hup: 
+                enabled: true
+                ensureRunning: true
+                files: 
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        02_setup-jq:
+          packages:
+            yum:
+              jq: []
+        03_setup-NAT:
+          commands:
+            01_disable-SrcDst-Check:
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                aws --region ${AWS::Region} ec2 modify-instance-attribute --instance-id=$INSTANCE_ID --no-source-dest-check
+            02_setup-NAT:
+              env:
+                ROUTE_TABLE_ID: !ImportValue RouteTablePrivate1
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                IsRouteExists=`aws --region ${AWS::Region} ec2 describe-route-tables --filters Name=route-table-id,Values=$ROUTE_TABLE_ID | jq -r '.[] | .[] | .Routes | .[] | .[]' | egrep '0.0.0.0/0|blackhole' | wc -l`
+                if [ $IsRouteExists -eq 2 ]
+                then
+                  aws --region ${AWS::Region} ec2 replace-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                else
+                  aws --region ${AWS::Region} ec2 create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                fi
+            03_enable-IP-forwarding:
+              command: |
+                sysctl -w net.ipv4.ip_forward=1
+                /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+                yum install -y iptables-services
+                service iptables save
+                
+  NATASG1:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
+    Properties:
+      AutoScalingGroupName: NATASG1
+      Cooldown: 300
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 0
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref NATLaunchTemplate1
+        Version: !GetAtt NATLaunchTemplate1.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 1
+      VPCZoneIdentifier:
+        - !ImportValue PublicSubnet1
+
+  NATLaunchTemplate2:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap [AmznLinux2AMIRegionMap, !Ref "AWS::Region", AMIID]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt NATInstanceProfile.Arn
+        KeyName: !Ref KeyPair
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            Groups:
+              - !ImportValue NATSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: NATInstances2
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            pip3 install --upgrade awscli
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate2 --configsets Initial
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource NATASG2
+      LaunchTemplateName: "NATLaunchTemplate2"
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: NATLaunchTemplate2
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          Initial:
+            - 01_setupCfnHup
+            - 02_setup-jq
+            - 03_setup-NAT
+          Update:
+            - 03_setup-NAT
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        01_setupCfnHup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.NATLaunchTemplate2.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate2 --configsets Update
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services: 
+            sysvinit:
+              cfn-hup: 
+                enabled: true
+                ensureRunning: true
+                files: 
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        02_setup-jq:
+          packages:
+            yum:
+              jq: []
+        03_setup-NAT:
+          commands:
+            01_disable-SrcDst-Check:
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                aws --region ${AWS::Region} ec2 modify-instance-attribute --instance-id=$INSTANCE_ID --no-source-dest-check
+            02_setup-NAT:
+              env:
+                ROUTE_TABLE_ID: !ImportValue RouteTablePrivate2
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                IsRouteExists=`aws --region ${AWS::Region} ec2 describe-route-tables --filters Name=route-table-id,Values=$ROUTE_TABLE_ID | jq -r '.[] | .[] | .Routes | .[] | .[]' | egrep '0.0.0.0/0|blackhole' | wc -l`
+                if [ $IsRouteExists -eq 2 ]
+                then
+                  aws --region ${AWS::Region} ec2 replace-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                else
+                  aws --region ${AWS::Region} ec2 create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                fi
+            03_enable-IP-forwarding:
+              command: |
+                sysctl -w net.ipv4.ip_forward=1
+                /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+                yum install -y iptables-services
+                service iptables save
+                
+  NATASG2:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
+    Properties:
+      AutoScalingGroupName: NATASG2
+      Cooldown: 300
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 0
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref NATLaunchTemplate2
+        Version: !GetAtt NATLaunchTemplate2.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 1
+      VPCZoneIdentifier:
+        - !ImportValue PublicSubnet2
+
+  NATLaunchTemplate3:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap [AmznLinux2AMIRegionMap, !Ref "AWS::Region", AMIID]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt NATInstanceProfile.Arn
+        KeyName: !Ref KeyPair
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            Groups:
+              - !ImportValue NATSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: NATInstances3
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            pip3 install --upgrade awscli
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate3 --configsets Initial
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource NATASG3
+      LaunchTemplateName: "NATLaunchTemplate3"
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: NATLaunchTemplate3
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          Initial:
+            - 01_setupCfnHup
+            - 02_setup-jq
+            - 03_setup-NAT
+          Update:
+            - 03_setup-NAT
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        01_setupCfnHup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.NATLaunchTemplate3.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource NATLaunchTemplate3 --configsets Update
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services: 
+            sysvinit:
+              cfn-hup: 
+                enabled: true
+                ensureRunning: true
+                files: 
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        02_setup-jq:
+          packages:
+            yum:
+              jq: []
+        03_setup-NAT:
+          commands:
+            01_disable-SrcDst-Check:
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                aws --region ${AWS::Region} ec2 modify-instance-attribute --instance-id=$INSTANCE_ID --no-source-dest-check
+            02_setup-NAT:
+              env:
+                ROUTE_TABLE_ID: !ImportValue RouteTablePrivate3
+              command: !Sub |
+                INSTANCE_ID=`curl http://169.254.169.254/latest/meta-data/instance-id`
+                IsRouteExists=`aws --region ${AWS::Region} ec2 describe-route-tables --filters Name=route-table-id,Values=$ROUTE_TABLE_ID | jq -r '.[] | .[] | .Routes | .[] | .[]' | egrep '0.0.0.0/0|blackhole' | wc -l`
+                if [ $IsRouteExists -eq 2 ]
+                then
+                  aws --region ${AWS::Region} ec2 replace-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                else
+                  aws --region ${AWS::Region} ec2 create-route --route-table-id $ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --instance-id $INSTANCE_ID
+                fi
+            03_enable-IP-forwarding:
+              command: |
+                sysctl -w net.ipv4.ip_forward=1
+                /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+                yum install -y iptables-services
+                service iptables save
+                
+  NATASG3:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
+    Properties:
+      AutoScalingGroupName: NATASG3
+      Cooldown: 300
+      DesiredCapacity: 1
+      HealthCheckGracePeriod: 0
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref NATLaunchTemplate3
+        Version: !GetAtt NATLaunchTemplate3.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 1
+      VPCZoneIdentifier:
+        - !ImportValue PublicSubnet3
+
+  

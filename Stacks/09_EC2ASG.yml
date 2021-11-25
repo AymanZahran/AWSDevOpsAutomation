@@ -1,0 +1,339 @@
+Parameters:
+  Subnets:
+    Description: Choose the Subnets the EC2 Autoscale Group will be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+  KeyPair:
+    Description: KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: "AWS_KeyPair"
+  EC2ASGName:
+    Description: EC2 Autoscale Group Name
+    Type: String
+    Default: EC2ASG
+  EC2ASGDesiredSize:
+    Description: Autoscale Desired Size
+    Type: String
+    Default: 2
+  EC2ASGMinSize:
+    Description: Autoscale Min Size
+    Type: String
+    Default: 2
+  EC2ASGMaxSize:
+    Description: Autoscale Max Size
+    Type: String
+    Default: 3
+  EC2ASGCPUThreshold:
+    Description: Autoscale CPU Scaling Policy
+    Type: String
+    Default: 80
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - c1.medium
+      - c1.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c3.large
+      - c3.xlarge
+      - cc2.8xlarge
+      - cg1.4xlarge
+      - cr1.8xlarge
+      - g2.2xlarge
+      - hi1.4xlarge
+      - hs1.8xlarge
+      - i2.2xlarge
+      - i2.4xlarge
+      - i2.8xlarge
+      - i2.xlarge
+      - m1.large
+      - m1.medium
+      - m1.small
+      - m1.xlarge
+      - m2.2xlarge
+      - m2.4xlarge
+      - m2.xlarge
+      - m3.2xlarge
+      - m3.large
+      - m3.medium
+      - m3.xlarge
+      - r3.2xlarge
+      - r3.4xlarge
+      - r3.8xlarge
+      - r3.large
+      - r3.xlarge
+      - t1.micro
+      - t2.medium
+      - t2.micro
+      - t2.small
+    Description: Instance Type
+
+Mappings:
+  AmznLinux2AMIRegionMap:
+    ap-northeast-1:
+      AMIID: ami-02d36247c5bc58c23
+    ap-northeast-2:
+      AMIID: ami-04e8dfc09b22389ad
+    ap-northeast-3:
+      AMIID: ami-026107638e7d599b1
+    ap-south-1:
+      AMIID: ami-041db4a969fe3eb68
+    ap-southeast-1:
+      AMIID: ami-07191cf2912e097a6
+    ap-southeast-2:
+      AMIID: ami-04a81599b183d7908
+    ca-central-1:
+      AMIID: ami-0d8ad3ab25e7abc51
+    eu-central-1:
+      AMIID: ami-047e03b8591f2d48a
+    eu-north-1:
+      AMIID: ami-001c5f3c0a8b3f245
+    eu-west-1:
+      AMIID: ami-0ed961fa828560210
+    eu-west-2:
+      AMIID: ami-074771aa49ab046e7
+    eu-west-3:
+      AMIID: ami-0da7ba92c3c072475
+    sa-east-1:
+      AMIID: ami-07983613af1a3ef44
+    us-east-1:
+      AMIID: ami-01cc34ab2709337aa
+    us-east-2:
+      AMIID: ami-0f19d220602031aed
+    us-west-1:
+      AMIID: ami-0e0bf4b3a0c0e0adc
+    us-west-2:
+      AMIID: ami-0e5b6b6a9f3db6db8
+
+Resources:
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !ImportValue EC2Role
+  WebServersLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap [AmznLinux2AMIRegionMap, !Ref "AWS::Region", AMIID]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt EC2InstanceProfile.Arn
+        KeyName: !Ref KeyPair
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            Groups:
+              - !ImportValue EC2SecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: WebServers
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource WebServersLaunchTemplate --configsets Initial
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource EC2ASG
+      LaunchTemplateName: "WebServersLaunchTemplate"
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: WebServersLaunchTemplate
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          Initial:
+            - 01_setupCfnHup
+            - 02_setup-httpd
+            - 03_config-httpd
+            - 04_setup_code-deploy-agent
+            - 05_setup-amazon-cloudwatch-agent
+            - 06_config-amazon-cloudwatch-agent
+            - 07_restart_amazon-cloudwatch-agent
+          Update:
+            - 03_config-httpd
+            - 06_config-amazon-cloudwatch-agent
+            - 07_restart_amazon-cloudwatch-agent
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        01_setupCfnHup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.WebServersLaunchTemplate.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource WebServersLaunchTemplate --configsets Update
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services: 
+            sysvinit:
+              cfn-hup: 
+                enabled: true
+                ensureRunning: true
+                files: 
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        02_setup-httpd:
+          packages:
+            yum:
+              httpd: []
+          services:
+            sysvinit:
+              httpd:
+                enabled: "true"
+                ensureRunning: "true"
+        03_config-httpd:
+          files:
+            "/var/www/html/index.html":
+              content: |
+                <h1>Hello World from EC2 instance!</h1>
+                <h2>Bellow is the EC2 Metadata</h2>
+              mode: "000644"
+        04_setup_code-deploy-agent:
+          packages:
+            yum:
+              ruby: []
+              wget: []
+          commands: 
+            01_download_the_install_file: 
+              command: !Sub |
+                wget https://aws-codedeploy-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/latest/install
+            02_give_execution_permission:
+              command: chmod +x ./install
+            03_install_the_agent:
+              command: ./install auto
+          services:
+            sysvinit:
+              codedeploy-agent:
+                enabled: "true"
+                ensureRunning: "true"
+        05_setup-amazon-cloudwatch-agent:
+          packages:
+            yum: 
+              amazon-cloudwatch-agent: []
+        # Definition of json configuration of AmazonCloudWatchAgent, you can change the configuration below.
+        06_config-amazon-cloudwatch-agent:
+          files:
+            '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json':
+              content: !Sub |
+                {
+                  "agent": {
+                    "metrics_collection_interval": 10,
+                    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+                    "region": "${AWS::Region}",
+                    "run_as_user": "root"
+                  },
+                  "metrics": {
+                    "namespace": "CWAgent",
+                    "metrics_collected": {
+                      "mem": {
+                        "measurement": [
+                          "mem_used",
+                          "mem_cached",
+                          "mem_total"
+                        ],
+                        "metrics_collection_interval": 1
+                      }
+                    },
+                    "force_flush_interval" : 30
+                  },
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [
+                          {
+                            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+                            "log_group_name": "CloudWatchAgentLogs",
+                            "log_stream_name": "CloudWatchAgentLogs",
+                            "timezone": "UTC"
+                          },
+                          {
+                            "file_path": "/var/log/httpd/access_log",
+                            "log_group_name": "HTTPAccessLogs",
+                            "log_stream_name": "HTTPAccessLogs",
+                            "timezone": "UTC"
+                          },
+                          {
+                            "file_path": "/var/log/aws/codedeploy-agent/codedeploy-agent.log",
+                            "log_group_name": "CodeDeployAgentLogs",
+                            "log_stream_name": "CodeDeployAgentLogs",
+                            "timezone": "UTC"
+                          }
+                        ]
+                      }
+                    },
+                    "log_stream_name": "dummy_stream_name",
+                    "force_flush_interval" : 15
+                  }
+                }
+              mode: "000644"
+        # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
+        07_restart_amazon-cloudwatch-agent:
+          commands:
+            01_stop_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+            02_start_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json -s
+        
+
+  EC2ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref EC2ASGDesiredSize
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+    Properties:
+      AutoScalingGroupName: !Ref EC2ASGName
+      Cooldown: 300
+      DesiredCapacity: !Ref EC2ASGDesiredSize
+      HealthCheckGracePeriod: 0
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebServersLaunchTemplate
+        Version: !GetAtt WebServersLaunchTemplate.LatestVersionNumber
+      MinSize: !Ref EC2ASGMinSize
+      MaxSize: !Ref EC2ASGMaxSize
+      MetricsCollection:
+        - Granularity: 1Minute
+      TargetGroupARNs:
+        - !ImportValue InstanceTargetGroup
+      VPCZoneIdentifier: !Ref Subnets
+
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref EC2ASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref EC2ASGCPUThreshold
+
+Outputs:
+  EC2ASGName:
+    Description: A reference to the EC2 AutoScale Group
+    Value: !Ref EC2ASGName
+    Export:
+      Name: EC2ASGName

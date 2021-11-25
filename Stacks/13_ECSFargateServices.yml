@@ -1,0 +1,105 @@
+Parameters: 
+  Cluster:
+    Description: ECS Cluster that this service should run on
+    Type: String
+    Default: ECSCluster
+  Subnets:
+    Description: Choose the Subnets the ECS Autoscale Group will be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+  ContainerName:
+    Description: ECS Container Name
+    Type: String
+    Default: nginx
+  ContainerPort:
+    Description: ECS Container Port
+    Type: Number
+    Default: 80
+  ServiceName:
+    Description: ECS Fargate Service Name
+    Type: String
+    Default: ECSFargateService
+  ServiceDesiredSize:
+    Description: Services Desired Size
+    Type: String
+    Default: 0
+  ServiceMinSize:
+    Description: Services Min Size
+    Type: String
+    Default: 2
+  ServiceMaxSize:
+    Description: Services Max Size
+    Type: String
+    Default: 5
+  ServiceCPUThreshold:
+    Description: Service CPU Scaling Policy
+    Type: String
+    Default: 80
+  RollingUpdateMaximumPercent:
+    Description: Rolling Update Maximum Percent
+    Type: Number
+    Default: 200
+  RollingUpdateMinimumPercent:
+    Description: Rolling Update Minimum Percent
+    Type: Number
+    Default: 100
+  ScaleInCooldown:
+    Description: Scale In Cooldown
+    Type: Number
+    Default: 300
+  ScaleOutCooldown:
+    Description: Scale In Cooldown
+    Type: Number
+    Default: 300
+
+Resources:
+  ECSFargateService: 
+    Type: AWS::ECS::Service
+    Properties: 
+      Cluster: !ImportValue ECSCluster
+      DeploymentConfiguration: 
+        MaximumPercent: !Ref RollingUpdateMaximumPercent
+        MinimumHealthyPercent: !Ref RollingUpdateMinimumPercent
+      TaskDefinition: !ImportValue TaskDefinition
+      LaunchType: FARGATE
+      ServiceName: !Ref ServiceName
+      DesiredCount: !Ref ServiceDesiredSize
+      NetworkConfiguration:
+        AwsvpcConfiguration: 
+          SecurityGroups:
+            - !ImportValue ECSTaskSecurityGroup
+          Subnets: !Ref Subnets
+      LoadBalancers: 
+        - ContainerName: !Ref ContainerName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !ImportValue IPTargetGroup
+  ServiceAutoScaling:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties: 
+      MaxCapacity: !Ref ServiceMaxSize
+      MinCapacity: !Ref ServiceMinSize
+      ResourceId: !Sub "service/${Cluster}/${ServiceName}"
+      RoleARN: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+    DependsOn: ECSFargateService
+  ScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties: 
+      PolicyName: ScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ServiceAutoScaling
+      TargetTrackingScalingPolicyConfiguration: 
+          DisableScaleIn: False
+          PredefinedMetricSpecification: 
+              PredefinedMetricType: ECSServiceAverageCPUUtilization
+          ScaleInCooldown: !Ref ScaleInCooldown
+          ScaleOutCooldown: !Ref ScaleOutCooldown
+          TargetValue: !Ref ServiceCPUThreshold
+    DependsOn: ServiceAutoScaling
+
+Outputs:
+  ECSFargateServiceName:
+    Description: A reference to the Service Name
+    Value: !Ref ServiceName
+    Export:
+      Name: ECSFargateServiceName

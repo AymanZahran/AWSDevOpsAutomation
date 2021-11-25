@@ -1,0 +1,313 @@
+Parameters:
+  Subnets:
+    Description: Choose the Subnets the EC2 Autoscale Group will be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+  KeyPair:
+    Description: KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: "AWS_KeyPair"
+  ECSClusterName:
+    Description: ECS Cluster Name
+    Type: String
+    Default: "ECSCluster"
+  ECSASGDesiredSize:
+    Description: Autoscale Desired Size
+    Type: String
+    Default: 2
+  ECSASGMinSize:
+    Description: Autoscale Min Size
+    Type: String
+    Default: 2
+  ECSASGMaxSize:
+    Description: Autoscale Max Size
+    Type: String
+    Default: 3
+  ECSASGCPUThreshold:
+    Description: Autoscale CPU Scaling Policy
+    Type: String
+    Default: 80
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - c1.medium
+      - c1.xlarge
+      - c3.2xlarge
+      - c3.4xlarge
+      - c3.8xlarge
+      - c3.large
+      - c3.xlarge
+      - cc2.8xlarge
+      - cg1.4xlarge
+      - cr1.8xlarge
+      - g2.2xlarge
+      - hi1.4xlarge
+      - hs1.8xlarge
+      - i2.2xlarge
+      - i2.4xlarge
+      - i2.8xlarge
+      - i2.xlarge
+      - m1.large
+      - m1.medium
+      - m1.small
+      - m1.xlarge
+      - m2.2xlarge
+      - m2.4xlarge
+      - m2.xlarge
+      - m3.2xlarge
+      - m3.large
+      - m3.medium
+      - m3.xlarge
+      - r3.2xlarge
+      - r3.4xlarge
+      - r3.8xlarge
+      - r3.large
+      - r3.xlarge
+      - t1.micro
+      - t2.medium
+      - t2.micro
+      - t2.small
+    Description: Instance Type
+
+Mappings:
+  AmznECSAMIRegionMap:
+    ap-northeast-1:
+      AMIID: ami-02c660ddf57f66e78
+    ap-northeast-2:
+      AMIID: ami-00ad714e0f1a26a32
+    ap-northeast-3:
+      AMIID: ami-0df6788c871586a57
+    ap-south-1:
+      AMIID: ami-04bcb41b8db548587
+    ap-southeast-1:
+      AMIID: ami-05c0be0ddeb5915f9
+    ap-southeast-2:
+      AMIID: ami-09fb62624e1ab3e2c
+    ca-central-1:
+      AMIID: ami-084558c06900f1b5f
+    eu-central-1:
+      AMIID: ami-088d915ff2a776984
+    eu-north-1:
+      AMIID: ami-0426c914bf426dd77
+    eu-west-1:
+      AMIID: ami-02cbbd18ed34c5898
+    eu-west-2:
+      AMIID: ami-0631049bf050d0d46
+    eu-west-3:
+      AMIID: ami-0b6985b29a2fd0ba6
+    sa-east-1:
+      AMIID: ami-0f6ae51ee416631f8
+    us-east-1:
+      AMIID: ami-078cbb92727dec530
+    us-east-2:
+      AMIID: ami-0102692edc680b5b0
+    us-west-1:
+      AMIID: ami-0c8b7aacccd254467
+    us-west-2:
+      AMIID: ami-072aaf1b030a33b6e
+
+Resources:
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: !Ref ECSClusterName
+      ClusterSettings: 
+        -   Name: containerInsights
+            Value: enabled
+      Tags: 
+        - Key: Name
+          Value: ECSCluster
+
+  ECSInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !ImportValue ECSRole
+
+  ECSLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap [AmznECSAMIRegionMap, !Ref "AWS::Region", AMIID]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: 
+          Arn: !GetAtt ECSInstanceProfile.Arn
+        KeyName: !Ref KeyPair
+        NetworkInterfaces:
+          - DeviceIndex: "0"
+            Groups:
+              - !ImportValue ECSSecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: ECSInstances
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum install -y aws-cfn-bootstrap
+            yum update -y
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource ECSLaunchTemplate --configsets Initial
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource ECSASG
+      LaunchTemplateName: "ECSLaunchTemplate"
+      TagSpecifications:
+        - ResourceType: launch-template
+          Tags:
+            - Key: Name
+              Value: ECSLaunchTemplate
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          Initial:
+            - 01_setupCfnHup
+            - 02_add-ecs-config
+            - 03_setup-amazon-cloudwatch-agent
+            - 04_config-amazon-cloudwatch-agent
+            - 05_restart_amazon-cloudwatch-agent
+          Update:
+            - 02_add-ecs-config
+            - 04_config-amazon-cloudwatch-agent
+            - 05_restart_amazon-cloudwatch-agent
+        01_setupCfnHup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/cfn-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.ECSLaunchTemplate.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource ECSLaunchTemplate --configsets Update
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services: 
+            sysvinit:
+              cfn-hup: 
+                enabled: true
+                ensureRunning: true
+                files: 
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+        02_add-ecs-config:
+          commands:
+            01_add_instance_to_cluster:
+              command: !Sub echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+        03_setup-amazon-cloudwatch-agent:
+          packages:
+            yum: 
+              amazon-cloudwatch-agent: []
+        # Definition of json configuration of AmazonCloudWatchAgent, you can change the configuration below.
+        04_config-amazon-cloudwatch-agent:
+          files:
+            '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json':
+              content: !Sub |
+                {
+                  "agent": {
+                    "metrics_collection_interval": 10,
+                    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+                    "region": "${AWS::Region}",
+                    "run_as_user": "root"
+                  },
+                  "metrics": {
+                    "namespace": "CWAgent",
+                    "metrics_collected": {
+                      "mem": {
+                        "measurement": [
+                          "mem_used",
+                          "mem_cached",
+                          "mem_total"
+                        ],
+                        "metrics_collection_interval": 1
+                      }
+                    },
+                    "force_flush_interval" : 30
+                  },
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [
+                          {
+                            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+                            "log_group_name": "CloudWatchAgentLogs",
+                            "log_stream_name": "CloudWatchAgentLogs",
+                            "timezone": "UTC"
+                          },
+                          {
+                            "file_path": "/var/log/ecs/ecs-agent.log",
+                            "log_group_name": "ECSAgentLogs",
+                            "log_stream_name": "ECSAgentLogs",
+                            "timezone": "UTC"
+                          }
+                        ]
+                      }
+                    },
+                    "log_stream_name": "dummy_stream_name",
+                    "force_flush_interval" : 15
+                  }
+                }
+        # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
+        05_restart_amazon-cloudwatch-agent:
+          commands:
+            01_stop_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+            02_start_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.d/file_amazon-cloudwatch-agent.json -s
+
+  ECSASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ECSASGDesiredSize
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: 1
+        MaxBatchSize: 1
+        PauseTime: PT15M
+        WaitOnResourceSignals: true
+    Properties:
+      AutoScalingGroupName: ECSASG
+      Cooldown: 300
+      DesiredCapacity: !Ref ECSASGDesiredSize
+      HealthCheckGracePeriod: 0
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref ECSLaunchTemplate
+        Version: !GetAtt ECSLaunchTemplate.LatestVersionNumber
+      MinSize: !Ref ECSASGMinSize
+      MaxSize: !Ref ECSASGMaxSize
+      MetricsCollection:
+        - Granularity: 1Minute
+      VPCZoneIdentifier: !Ref Subnets
+      
+  ScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref ECSASG
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: !Ref ECSASGCPUThreshold
+
+Outputs:
+  ECSCluster:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSCluster
+    Export:
+      Name: ECSCluster
+  ECSClusterName:
+    Description: A reference to the ECS cluster
+    Value: !Ref ECSClusterName
+    Export:
+      Name: ECSClusterName

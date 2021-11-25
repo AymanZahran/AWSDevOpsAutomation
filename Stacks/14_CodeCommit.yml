@@ -1,0 +1,37 @@
+Parameters:
+  StacksBucketName:
+    Description: S3 Bucket Name
+    Type: String
+  S3Key:
+    Description: S3 Bucket Key
+    Type: String
+    Default: code.zip
+  CodeCommitRepoName:
+    Description: CodeCommit Repo Name
+    Type: String
+
+Resources:
+  CodeCommit:
+    Type: AWS::CodeCommit::Repository
+    Properties: 
+      Code: 
+        BranchName: main
+        S3: 
+          Bucket: !Ref StacksBucketName
+          Key: !Ref S3Key
+      RepositoryDescription: CloudAutomationCodeCommit
+      RepositoryName: !Ref CodeCommitRepoName
+  
+Outputs:
+  CodeCommitRepo:
+    Description: A reference to the CodeCommit Repo
+    Value: !Ref CodeCommit
+    Export:
+      Name: CodeCommit
+  CodeCommitRepoName:
+    Description: A reference to the CodeCommit Repo Name
+    Value: !GetAtt CodeCommit.Name
+    Export:
+      Name: CodeCommitRepoName
+
+    

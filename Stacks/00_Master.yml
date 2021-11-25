@@ -1,0 +1,162 @@
+Parameters:
+  StacksBucketName:
+    Description: Bucket Name for the Cloudformation Stacks
+    Type: String
+  CloudTrailBucketName:
+    Description: Bucket Name for the CloudTrail
+    Type: String
+  ArtifactsBucketName:
+    Description: Bucket Name for Artifacts Stages Transitions
+    Type: String
+  CodeCommitRepoName:
+    Description: CodeCommit Repo Name
+    Type: String
+  ECRRepoName:
+    Description: ECR Repo Name
+    Type: String
+
+Resources:
+  IAM:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/01_IAM.yml
+  Storage:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/02_Storage.yml
+      Parameters:
+        CloudTrailBucketName: !Ref CloudTrailBucketName
+        ArtifactsBucketName: !Ref ArtifactsBucketName
+    DependsOn: [IAM]
+  CloudTrail:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/03_CloudTrail.yml
+      Parameters:
+        CloudTrailBucketName: !Ref CloudTrailBucketName
+    DependsOn: [IAM, Storage]
+  Networking:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/04_Networking.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+    DependsOn: [CloudTrail]
+  Firewalls:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/05_Firewalls.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+    DependsOn: [Networking]
+  NATInstances:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/06_NATInstances.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+    DependsOn: [Networking, Firewalls]
+  BastionHost:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/07_BastionHost.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        PublicSubnet: !GetAtt Networking.Outputs.PublicSubnet1
+    DependsOn: [Networking, Firewalls]
+  ALB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/08_ALB.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        VPC: !GetAtt Networking.Outputs.VPC
+        Subnets: !GetAtt Networking.Outputs.PublicSubnets
+    DependsOn: [Networking, Firewalls]
+  EC2ASG:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/09_EC2ASG.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+    DependsOn: [ALB, NATInstances]
+  ECSCluster:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/10_ECSCluster.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+    DependsOn: [ALB, NATInstances]
+  TaskDefinition:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/11_ECSTaskDefinition.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+    DependsOn: [ALB, ECSCluster]
+  ECSEC2Services:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/12_ECSEC2Services.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+    DependsOn: [ALB, ECSCluster, TaskDefinition]
+  ECSFargateServices:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/13_ECSFargateServices.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+    DependsOn: [ALB, ECSCluster, TaskDefinition]
+  CodeCommit:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/14_CodeCommit.yml
+      Parameters:
+        StacksBucketName: !Ref StacksBucketName
+        CodeCommitRepoName: !Ref CodeCommitRepoName
+    DependsOn: [IAM, CloudTrail]
+  ECR:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/15_ECR.yml
+      Parameters:
+        ECRRepoName: !Ref ECRRepoName
+    DependsOn: [IAM, CloudTrail]
+  CodeBuild:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/16_CodeBuild.yml
+    DependsOn: [CodeCommit, ECR]
+  CodeDeploy:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/17_CodeDeploy.yml
+    DependsOn: [CodeCommit, ECR, CodeBuild, EC2ASG]
+  CodePipeline:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/18_CodePipeline.yml
+      Parameters:
+        ArtifactsBucketName: !Ref ArtifactsBucketName
+    DependsOn: [CodeCommit, ECR, CodeBuild, CodeDeploy, EC2ASG, ECSEC2Services, ECSFargateServices]

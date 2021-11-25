@@ -1,0 +1,80 @@
+Parameters: 
+  ContainerPort: 
+    Description: Container Port
+    Type: Number
+    Default: 80
+  ECSTasksLogsGroupName: 
+    Description: ECS Tasks Log Group
+    Type: String
+    Default: ECSTasksLogGroup
+  ECSTasksLogsGroupRetention: 
+    Description: ECS Tasks Log Group Retention
+    Type: Number
+    Default: 365
+  ECSContainerName:
+    Description: ECS Container Name
+    Type: String
+    Default: nginx
+  ECSContainerImage:
+    Description: ECS Container Image
+    Type: String
+    Default: nginx
+  TaskCPU:
+    Description: Task CPU
+    Type: Number
+    Default: 256
+  TaskMemory:
+    Description: Task Memory
+    Type: Number
+    Default: 512
+  ContainerCPU: 
+    Description: Container CPU
+    Type: Number
+    Default: 256
+  ContainerMemory: 
+    Description: Container Memory
+    Type: Number
+    Default: 512
+
+Resources:
+  ECSTasksLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref ECSTasksLogsGroupName
+      RetentionInDays: !Ref ECSTasksLogsGroupRetention
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    UpdateReplacePolicy: Retain
+    Properties:
+      RequiresCompatibilities:
+        - "EC2"
+        - "FARGATE"
+      NetworkMode: awsvpc
+      RuntimePlatform:
+          CpuArchitecture: X86_64
+          OperatingSystemFamily: LINUX
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !ImportValue ECSTaskRole
+      ContainerDefinitions:
+        - Name: !Ref ECSContainerName
+          Essential: true
+          Image: !Ref ECSContainerImage
+          Cpu: !Ref ContainerCPU
+          Memory: !Ref ContainerMemory
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ECSTasksLogsGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "StreamPrefix"
+
+Outputs:
+  TaskDefinition:
+    Description: A reference to the Task Definition
+    Value: !Ref TaskDefinition
+    Export:
+      Name: TaskDefinition

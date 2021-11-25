@@ -1,0 +1,413 @@
+Resources:
+  NATRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: NAT-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: nat-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:ModifyInstanceAttribute
+              - ec2:ReplaceRoute
+              - ec2:CreateRoute
+              - ec2:DeleteRoute
+              - ec2:DescribeRouteTables
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DescribeInstanceAttribute
+            Resource: '*'
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: EC2-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: ec2-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - s3:*
+              - dynamodb:*
+              - kms:*
+              - cloudwatch:PutMetricData
+              - logs:PutLogEvents
+              - logs:DescribeLogStreams
+              - logs:DescribeLogGroups
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "*"
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: ECS-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: ecs-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:DeregisterContainerInstance'
+              - 'ecs:DiscoverPollEndpoint'
+              - 'ecs:Poll'
+              - 'ecs:RegisterContainerInstance'
+              - 'ecs:StartTelemetrySession'
+              - 'ecs:Submit*'
+              - 'cloudwatch:PutMetricData'
+              - 'logs:PutLogEvents'
+              - 'logs:DescribeLogStreams'
+              - 'logs:DescribeLogGroups'
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:GetAuthorizationToken'
+            Resource: '*'
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: Task-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: ecs-task-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 's3:ListBucket'
+              - 's3:GetObject'
+              - 's3:PutObject'
+              - 'dynamodb:*'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: '*'
+
+  CloudTrailRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudTrailRole
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [cloudtrail.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: cloudtrail-policy
+        PolicyDocument:
+          Statement:
+          - Action:
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Effect: Allow
+            Resource: "*"
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeBuild-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [codebuild.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: codebuild-policy
+        PolicyDocument:
+          Statement:
+          - Action:
+            - codebuild:StartBuild
+            - codebuild:BatchGet*
+            - codebuild:GetResourcePolicy
+            - codebuild:List*
+            - codebuild:DescribeTestCases
+            - codebuild:DescribeCodeCoverages
+            - codecommit:GetBranch
+            - codecommit:GetCommit
+            - codecommit:GetRepository
+            - cloudwatch:GetMetricStatistics
+            - cloudwatch:PutMetricData
+            - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            - logs:DescribeLogGroups
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:GetLogEvents
+            - events:DescribeRule
+            - events:ListTargetsByRule
+            - events:ListRuleNamesByTarget
+            - s3:*
+            - ecr:*
+            Effect: Allow
+            Resource: "*"  
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodePipeline-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [codepipeline.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: codepipeline-policy
+        PolicyDocument:
+          Statement:
+          - Action:
+            - codepipeline:*
+            - cloudformation:DescribeStacks
+            - cloudformation:ListChangeSets
+            - cloudformation:CreateStack
+            - cloudformation:UpdateStack
+            - codebuild:StartBuild
+            - codebuild:BatchGetProjects
+            - codebuild:CreateProject
+            - codebuild:ListCuratedEnvironmentImages
+            - codebuild:ListProjects
+            - codebuild:BatchGetBuilds
+            - codecommit:*
+            - codedeploy:*
+            - devicefarm:GetDevicePool
+            - devicefarm:GetProject
+            - devicefarm:ListDevicePools
+            - devicefarm:ListProjects
+            - ec2:DescribeSecurityGroups
+            - ec2:DescribeSubnets
+            - ec2:DescribeVpcs
+            - ecr:DescribeRepositories
+            - ecr:ListImages
+            - ecs:*
+            - iam:ListRoles
+            - iam:GetRole
+            - lambda:GetFunctionConfiguration
+            - lambda:ListFunctions
+            - events:ListRules
+            - events:ListTargetsByRule
+            - events:DescribeRule
+            - s3:*
+            - lambda:InvokeFunction
+            Effect: Allow
+            Resource: "*"
+          - Action:
+            - s3:GetObject
+            - s3:CreateBucket
+            - s3:PutBucketPolicy
+            Effect: Allow
+            Resource: arn:aws:s3::*:codepipeline-*
+          - Action:
+            - iam:PassRole
+            Effect: Allow
+            Resource: "*"
+          - Action:
+            - iam:PassRole
+            Effect: Allow
+            Resource: "*"
+            Condition:
+              StringEquals:
+                iam:PassedToService:
+                - codepipeline.amazonaws.com
+          - Action:
+            - events:PutRule
+            - events:PutTargets
+            - events:DeleteRule
+            - events:DisableRule
+            - events:RemoveTargets
+            Effect: Allow
+            Resource:
+            - arn:aws:events:*:*:rule/codepipeline-*
+  CloudformationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: Cloudformation-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [cloudformation.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: cloudformation-policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action: "*"
+              Resource: "*"
+  
+  CodeDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeDeploy-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [codedeploy.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: codedeploy-policy
+        PolicyDocument:
+          Statement:
+          - Action:
+            - autoscaling:CompleteLifecycleAction
+            - autoscaling:DeleteLifecycleHook
+            - autoscaling:DescribeAutoScalingGroups
+            - autoscaling:DescribeLifecycleHooks
+            - autoscaling:PutLifecycleHook
+            - autoscaling:RecordLifecycleActionHeartbeat
+            - autoscaling:CreateAutoScalingGroup
+            - autoscaling:UpdateAutoScalingGroup
+            - autoscaling:EnableMetricsCollection
+            - autoscaling:DescribePolicies
+            - autoscaling:DescribeScheduledActions
+            - autoscaling:DescribeNotificationConfigurations
+            - autoscaling:SuspendProcesses
+            - autoscaling:ResumeProcesses
+            - autoscaling:AttachLoadBalancers
+            - autoscaling:AttachLoadBalancerTargetGroups
+            - autoscaling:PutScalingPolicy
+            - autoscaling:PutScheduledUpdateGroupAction
+            - autoscaling:PutNotificationConfiguration
+            - autoscaling:PutWarmPool
+            - autoscaling:DescribeScalingActivities
+            - autoscaling:DeleteAutoScalingGroup
+            - ec2:DescribeInstances
+            - ec2:DescribeInstanceStatus
+            - ec2:TerminateInstances
+            - tag:GetResources
+            - sns:Publish
+            - cloudwatch:DescribeAlarms
+            - cloudwatch:PutMetricAlarm
+            - elasticloadbalancing:DescribeLoadBalancers
+            - elasticloadbalancing:DescribeInstanceHealth
+            - elasticloadbalancing:RegisterInstancesWithLoadBalancer
+            - elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+            - elasticloadbalancing:DescribeTargetGroups
+            - elasticloadbalancing:DescribeTargetHealth
+            - elasticloadbalancing:RegisterTargets
+            - elasticloadbalancing:DeregisterTargets
+            Effect: Allow
+            Resource: "*" 
+
+  CodeCommitToS3LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CodeCommitToS3Lambda-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: CodeCommitToS3Lambda-policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action: 
+                - codecommit:*
+                - codepipeline:*
+                - s3:*
+                - logs:PutLogEvents
+                - logs:DescribeLogStreams
+                - logs:DescribeLogGroups
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:GetLogEvents
+                - events:DescribeRule
+                - events:ListTargetsByRule
+                - events:ListRuleNamesByTarget
+              Resource: "*"
+        
+Outputs:
+  NATRole:
+    Description: A reference to the NAT Instances Role
+    Value: !Ref NATRole
+    Export:
+      Name: NATRole
+  EC2Role:
+    Description: A reference to the EC2 Role
+    Value: !Ref EC2Role
+    Export:
+      Name: EC2Role
+  ECSRole:
+    Description: A reference to the ECS Role
+    Value: !Ref ECSRole
+    Export:
+      Name: ECSRole
+  ECSTaskRole:
+    Description: A reference to the ECS Task Role
+    Value: !Ref ECSTaskRole
+    Export:
+      Name: ECSTaskRole
+  CloudTrailRole:
+    Description: A reference to the Cloud Trail Logs
+    Value: !GetAtt CloudTrailRole.Arn
+    Export:
+      Name: CloudTrailRole
+  CodeBuildRole:
+    Description: A reference to the Code Build Role
+    Value: !GetAtt CodeBuildRole.Arn
+    Export:
+      Name: CodeBuildRole
+  CodePipelineRole:
+    Description: A reference to the Code Pipeline Role
+    Value: !GetAtt CodePipelineRole.Arn
+    Export:
+      Name: CodePipelineRole
+  CloudformationRole:
+    Description: A reference to the Codeformation Role
+    Value: !GetAtt CloudformationRole.Arn
+    Export:
+      Name: CloudformationRole
+  CodeDeployRole:
+    Description: A reference to the CodeDeploy Role Role
+    Value: !GetAtt CodeDeployRole.Arn
+    Export:
+      Name: CodeDeployRole
+  CodeCommitToS3LambdaRole:
+    Description: A reference to the Codeformation Role
+    Value: !GetAtt CodeCommitToS3LambdaRole.Arn
+    Export:
+      Name: CodeCommitToS3LambdaRole

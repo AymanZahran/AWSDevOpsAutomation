@@ -1,0 +1,101 @@
+Parameters:
+  ArtifactsBucketName:
+    Description: Bucket Name for Artifacts Stages Transitions
+    Type: String
+  CodePipelineName:
+    Description: CodePipeline Name
+    Type: String
+    Default: CodePipeline
+
+Resources:
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Location: !Ref ArtifactsBucketName
+        Type: S3
+      Name: !Ref CodePipelineName
+      RestartExecutionOnUpdate: True
+      RoleArn: !ImportValue CodePipelineRole
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: 1
+              Configuration:
+                RepositoryName: !ImportValue CodeCommitRepoName
+                BranchName: main
+              OutputArtifacts:
+                - Name: RepoOutput
+        - Name: Build
+          Actions:
+            - Name: BuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: "1"
+              InputArtifacts:
+                - Name: RepoOutput
+              Configuration:
+                ProjectName: !ImportValue BuildProjectName
+              OutputArtifacts:
+                - Name: BuildOutput
+        - Name: DeployECSEC2Services
+          Actions:
+            - Name: DeployECSEC2ServicesAction
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ECS
+                Version: '1'
+              Configuration:
+                ClusterName: !ImportValue ECSClusterName
+                ServiceName: !ImportValue ECSEC2ServiceName
+                FileName: imagedefinitions.json
+                DeploymentTimeout: '15'
+              InputArtifacts:
+                - Name: BuildOutput
+        - Name: DeployECSFargateServices
+          Actions:
+            - Name: DeployECSEC2ServicesAction
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ECS
+                Version: '1'
+              Configuration:
+                ClusterName: !ImportValue ECSClusterName
+                ServiceName: !ImportValue ECSFargateServiceName
+                FileName: imagedefinitions.json
+                DeploymentTimeout: '15'
+              InputArtifacts:
+                - Name: BuildOutput
+        # - Name: Approve7
+        #   Actions:
+        #     - Name: ApproveAction7
+        #       ActionTypeId:
+        #         Category: Approval
+        #         Owner: AWS
+        #         Provider: Manual
+        #         Version: "1"
+        #       Configuration:
+        #         CustomData: "Approve"
+        - Name: Deploy
+          Actions:
+            - Name: Deploy
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CodeDeploy
+                Version: '1'
+              Configuration:
+                ApplicationName: !ImportValue CodeDeployApplicationName
+                DeploymentGroupName: !ImportValue DeploymentGroupName
+              InputArtifacts:
+                - Name: BuildOutput
+        

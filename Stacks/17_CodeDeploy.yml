@@ -1,0 +1,51 @@
+Parameters:
+  CodeDeployApplicationName:
+    Description: Code Deploy Application Name
+    Type: String
+    Default: CodeDeployApplication
+  DeploymentGroupName:
+    Description: Deployment Group Name
+    Type: String
+    Default: DeploymentGroup
+
+Resources:
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Ref CodeDeployApplicationName
+      ComputePlatform: Server
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      ApplicationName: !Ref CodeDeployApplication
+      DeploymentGroupName: !Ref DeploymentGroupName
+      DeploymentConfigName: CodeDeployDefault.OneAtATime
+      Ec2TagFilters: 
+        -   Key: Name
+            Type: KEY_AND_VALUE
+            Value: WebServers
+      AutoScalingGroups: 
+        - !ImportValue EC2ASGName
+      LoadBalancerInfo:
+        TargetGroupInfoList: 
+          - Name: !ImportValue InstanceTargetGroupName
+      DeploymentStyle: 
+        DeploymentOption: WITH_TRAFFIC_CONTROL
+        DeploymentType: IN_PLACE
+      AutoRollbackConfiguration: 
+        Enabled: True
+        Events: 
+          - DEPLOYMENT_FAILURE
+      ServiceRoleArn: !ImportValue CodeDeployRole
+
+Outputs:
+  CodeDeployApplicationName:
+    Description: A reference to the Code Deploy Application Name
+    Value: !Ref CodeDeployApplicationName
+    Export:
+      Name: CodeDeployApplicationName
+  DeploymentGroupName:
+    Description: A reference to the Deploymeny Group Name
+    Value: !Ref DeploymentGroupName
+    Export:
+      Name: DeploymentGroupName

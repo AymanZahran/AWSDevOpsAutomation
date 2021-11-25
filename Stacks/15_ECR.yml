@@ -1,0 +1,27 @@
+Parameters:
+  ECRRepoName:
+    Description: ECR Repo Name
+    Type: String
+
+Resources:
+  ECR:
+    Type: AWS::ECR::Repository
+    Properties: 
+      EncryptionConfiguration: 
+        EncryptionType: AES256
+      ImageScanningConfiguration: 
+        ScanOnPush: false
+      ImageTagMutability: MUTABLE
+      RepositoryName: !Ref ECRRepoName
+
+Outputs:
+  ECRRepo:
+    Description: A reference to the ECR
+    Value: !Ref ECR
+    Export:
+      Name: ECR
+  ECRRepoUri:
+    Description: A reference to the ECR Repo Uri
+    Value: !GetAtt ECR.RepositoryUri
+    Export:
+      Name: ECRRepoUri

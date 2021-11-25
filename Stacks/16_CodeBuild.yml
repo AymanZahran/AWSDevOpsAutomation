@@ -1,0 +1,44 @@
+Parameters:
+  BuildProjectName:
+    Description: Build Project Name
+    Type: String
+    Default: PrepareDockerImage
+
+Resources:
+  PrepareDockerImage:
+    Type: AWS::CodeBuild::Project
+    Properties: 
+      Artifacts: 
+        Type: CODEPIPELINE
+      Description: Prepare Docker Image
+      Environment: 
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables: 
+          - Name: AWS_REGION
+            Type: PLAINTEXT
+            Value: !Sub ${AWS::Region}
+          - Name: REPOSITORY_URI
+            Type: PLAINTEXT
+            Value: !ImportValue ECRRepoUri
+        Image: "aws/codebuild/standard:4.0"
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: True
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: Codebuild
+          Status: ENABLED
+          StreamName: PrepareDockerImages
+      Name: !Ref BuildProjectName
+      ResourceAccessRole: !ImportValue CodeBuildRole
+      ServiceRole: !ImportValue CodeBuildRole
+      Source: 
+        BuildSpec: buildspec.yml
+        Type: CODEPIPELINE
+
+Outputs:
+  BuildProjectName:
+    Description: A reference to the Build Project Name
+    Value: !Ref BuildProjectName
+    Export:
+      Name: BuildProjectName

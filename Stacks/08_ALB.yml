@@ -1,0 +1,112 @@
+Parameters:
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Choose the VPC the Application Load Balancer will be deployed in
+  Subnets:
+    Description: Choose the Subnets the Application Load Balancer will be deployed in
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  InstanceTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckEnabled: True
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      IpAddressType: ipv4
+      Matcher: 
+        HttpCode: 200
+      Name: "InstanceTargetGroup"
+      Port: 80
+      Protocol: "HTTP"
+      ProtocolVersion: HTTP1
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+      Tags: 
+        - Key: Name
+          Value: InstanceTargetGroup
+      TargetType: instance
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VPC
+
+  IPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckEnabled: True
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: "/"
+      HealthCheckProtocol: "HTTP"
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      IpAddressType: ipv4
+      Matcher: 
+        HttpCode: 200
+      Name: "IPTargetGroup"
+      Port: 80
+      Protocol: "HTTP"
+      ProtocolVersion: HTTP1
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+      Tags: 
+        - Key: Name
+          Value: IPTargetGroup
+      TargetType: ip
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VPC
+
+  ALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Name: ALB
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !ImportValue ALBSecurityGroup
+      Subnets: !Ref Subnets
+      Tags: 
+        - Key: Name
+          Value: ApplicationLoadBalancer
+      Type: application
+
+  InternetFacingListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions:
+       - Type: "forward"
+         ForwardConfig:
+          TargetGroups: 
+            - TargetGroupArn: !Ref InstanceTargetGroup
+              Weight: 50
+            - TargetGroupArn: !Ref IPTargetGroup
+              Weight: 50
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: "HTTP"
+
+Outputs:
+  InstanceTargetGroup:
+    Description: A reference to the Instance Target Group
+    Value: !Ref InstanceTargetGroup
+    Export:
+      Name: InstanceTargetGroup
+  InstanceTargetGroupName:
+    Description: A reference to the Instance Target Group Name
+    Value: !GetAtt InstanceTargetGroup.TargetGroupName
+    Export:
+      Name: InstanceTargetGroupName
+  IPTargetGroup:
+    Description: A reference to the IP Target Group
+    Value: !Ref IPTargetGroup
+    Export:
+      Name: IPTargetGroup
+  ALB:
+    Description: A reference to the ALB
+    Value: !Ref ALB
+    Export:
+      Name: ALB
+
