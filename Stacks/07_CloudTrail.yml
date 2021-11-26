@@ -3,29 +3,15 @@ Parameters:
     Description: Cloud Trail Name
     Type: String
     Default: CloudTrail
-  CloudTrailLogsGroupName: 
-    Description: Cloud Trail Log Group Name
-    Type: String
-    Default: CloudTrail-LogGroup
-  CloudTrailLogsGroupRetention: 
-    Description: Cloud Trail Log Group Retention
-    Type: Number
-    Default: 365
   CloudTrailBucketName:
     Description: Bucket Name for Cloud Trail Logs
     Type: String
 
 Resources:
-  CloudTrailLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      LogGroupName: !Ref CloudTrailLogsGroupName
-      RetentionInDays: !Ref CloudTrailLogsGroupRetention
-
   CloudTrail:
     Type: AWS::CloudTrail::Trail
     Properties: 
-      CloudWatchLogsLogGroupArn: !GetAtt CloudTrailLogGroup.Arn
+      CloudWatchLogsLogGroupArn: !ImportValue CloudTrailLogGroup
       CloudWatchLogsRoleArn: !ImportValue CloudTrailRole
       EnableLogFileValidation: No
       EventSelectors: 

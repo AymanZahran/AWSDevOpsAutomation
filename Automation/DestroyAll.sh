@@ -7,9 +7,6 @@ ArtifactsBucketName="artifacts-bucket-$ACCOUNT_ID"
 CodeCommitRepoName="codecommit-repo-$ACCOUNT_ID"
 ECRRepoName="ecr-repo-$ACCOUNT_ID"
 
+python3 DestroyBuckets.py
 aws ecr delete-repository --repository-name $ECRRepoName --force
-python3 DestroyBucketObjects.py
-aws s3 rb s3://$StacksBucketName --force
-aws s3 rb s3://$CloudTrailBucketName --force
-aws s3 rb s3://$ArtifactsBucketName --force
 aws cloudformation delete-stack --stack-name Master

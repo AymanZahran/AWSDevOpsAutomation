@@ -131,6 +131,8 @@ Resources:
             Tags:
               - Key: Name
                 Value: WebServers
+              - Key: AllowInspector
+                Value: Enabled
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
@@ -154,6 +156,7 @@ Resources:
             - 05_setup-amazon-cloudwatch-agent
             - 06_config-amazon-cloudwatch-agent
             - 07_restart_amazon-cloudwatch-agent
+            - 08_setup_inspector-agent
           Update:
             - 03_config-httpd
             - 06_config-amazon-cloudwatch-agent
@@ -202,8 +205,7 @@ Resources:
           files:
             "/var/www/html/index.html":
               content: |
-                <h1>Hello World from EC2 instance!</h1>
-                <h2>Bellow is the EC2 Metadata</h2>
+                <h1>Hello World from EC2 Instance!</h1>
               mode: "000644"
         04_setup_code-deploy-agent:
           packages:
@@ -218,6 +220,8 @@ Resources:
               command: chmod +x ./install
             03_install_the_agent:
               command: ./install auto
+            04_remove_the_install_file:
+              command: rm -f install
           services:
             sysvinit:
               codedeploy-agent:
@@ -247,6 +251,15 @@ Resources:
                   - |
                     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ssmkey} -s
                   - { ssmkey: !ImportValue WebInstancesSSM }
+        08_setup_inspector-agent:
+          01_download_the_inspector_install_file: 
+            command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+          02_give_execution_to_inspector_install_file:
+            command: chmod +x ./install
+          03_install_the_inspector_agent:
+            command: ./install
+          04_remove_the_inspector_install_file:
+            command: rm -f install
 
   EC2ASG:
     Type: AWS::AutoScaling::AutoScalingGroup

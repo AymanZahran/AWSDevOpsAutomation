@@ -35,20 +35,20 @@ Resources:
                 "collect_list": [
                   {
                     "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-                    "log_group_name": "CloudWatchAgentLogs",
-                    "log_stream_name": "CloudWatchAgentLogs-{hostname}-{ip_address}",
+                    "log_group_name": "CloudWatchAgent-LogGroup",
+                    "log_stream_name": "{hostname}-{ip_address}",
                     "timezone": "UTC"
                   },
                   {
                     "file_path": "/var/log/httpd/access_log",
-                    "log_group_name": "HTTPAccessLogs",
-                    "log_stream_name": "HTTPAccessLogs-{hostname}-{ip_address}",
+                    "log_group_name": "HTTPAccess-LogGroup",
+                    "log_stream_name": "{hostname}-{ip_address}",
                     "timezone": "UTC"
                   },
                   {
                     "file_path": "/var/log/aws/codedeploy-agent/codedeploy-agent.log",
-                    "log_group_name": "CodeDeployAgentLogs",
-                    "log_stream_name": "CodeDeployAgentLogs-{hostname}-{ip_address}",
+                    "log_group_name": "CodeDeployAgent-LogGroup",
+                    "log_stream_name": "{hostname}-{ip_address}",
                     "timezone": "UTC"
                   }
                 ]
@@ -94,14 +94,14 @@ Resources:
                 "collect_list": [
                   {
                     "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
-                    "log_group_name": "CloudWatchAgentLogs",
-                    "log_stream_name": "CloudWatchAgentLogs-{hostname}-{ip_address}",
+                    "log_group_name": "CloudWatchAgent-LogGroup",
+                    "log_stream_name": "{hostname}-{ip_address}",
                     "timezone": "UTC"
                   },
                   {
                     "file_path": "/var/log/ecs/ecs-agent.log",
-                    "log_group_name": "ECSAgentLogs",
-                    "log_stream_name": "ECSAgentLogs-{hostname}-{ip_address}",
+                    "log_group_name": "ECSAgent-LogGroup",
+                    "log_stream_name": "{hostname}-{ip_address}",
                     "timezone": "UTC"
                   }
                 ]

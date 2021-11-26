@@ -108,6 +108,8 @@ Resources:
             Tags:
               - Key: Name
                 Value: NATInstances1
+              - Key: AllowInspector
+                Value: Enabled
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
@@ -228,6 +230,8 @@ Resources:
             Tags:
               - Key: Name
                 Value: NATInstances2
+              - Key: AllowInspector
+                Value: Enabled
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
@@ -348,6 +352,8 @@ Resources:
             Tags:
               - Key: Name
                 Value: NATInstances3
+              - Key: AllowInspector
+                Value: Enabled
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash

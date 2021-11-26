@@ -37,12 +37,6 @@ Parameters:
     Default: 512
 
 Resources:
-  ECSTasksLogsGroup:
-    Type: AWS::Logs::LogGroup
-    Properties: 
-      LogGroupName: !Ref ECSTasksLogsGroupName
-      RetentionInDays: !Ref ECSTasksLogsGroupRetention
-
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     UpdateReplacePolicy: Retain
@@ -68,7 +62,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref ECSTasksLogsGroup
+              awslogs-group: !ImportValue ECSTasksLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: "StreamPrefix"
 

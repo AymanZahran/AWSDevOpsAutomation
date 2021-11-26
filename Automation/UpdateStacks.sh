@@ -19,7 +19,6 @@ aws --region $AWS_REGION cloudformation update-stack \
     --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
     --parameters ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
     ParameterKey=CloudTrailBucketName,ParameterValue=$CloudTrailBucketName \
-    ParameterKey=CodeCommitBackupBucketName,ParameterValue=$CodeCommitBackupBucketName \
     ParameterKey=ArtifactsBucketName,ParameterValue=$ArtifactsBucketName \
     ParameterKey=CodeCommitRepoName,ParameterValue=$CodeCommitRepoName \
     ParameterKey=ECRRepoName,ParameterValue=$ECRRepoName

@@ -55,3 +55,12 @@ Resources:
             Resource: !Sub "arn:aws:s3:::${ArtifactsBucketName}/*"
             Principal:
               Service: ec2.amazonaws.com
+
+
+Outputs:
+  CloudTrailBucket:
+    Description: A reference to the CloudTrailBucket Arn
+    Value: !GetAtt CloudTrailBucket.Arn
+    Export:
+      Name: CloudTrailBucket
+      

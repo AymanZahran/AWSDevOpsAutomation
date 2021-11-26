@@ -22,6 +22,8 @@ Resources:
       Tags:
         - Key: Name
           Value: BastionHost
+        - Key: AllowInspector
+          Value: Enabled
 
 Outputs:
   BastionHostIP:

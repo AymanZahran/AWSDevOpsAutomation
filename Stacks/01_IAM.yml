@@ -1,4 +1,49 @@
 Resources:
+  CloudWatchToKinesisRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: CloudWatchToKinesisRole-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 
+              !Join
+                - '.'
+                - - "logs"
+                  - !Ref AWS::Region
+                  - "amazonaws.com"
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: cloudWatchtokinesisRole-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - kinesis:PutRecord
+            Resource: '*'
+  CloudTrailDeliveryStreamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: CloudTrailDeliveryStream-Role
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [firehose.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: firehose-policy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - kinesis:*
+              - s3:*
+              - cloudwatch:*
+            Resource: '*'
   NATRole:
     Type: AWS::IAM::Role
     Properties:
@@ -415,3 +460,16 @@ Outputs:
     Value: !GetAtt CodeCommitToS3LambdaRole.Arn
     Export:
       Name: CodeCommitToS3LambdaRole
+  CloudTrailDeliveryStreamRole:
+    Description: A reference to the CloudTrail Delivery Stream Role
+    Value: !GetAtt CloudTrailDeliveryStreamRole.Arn
+    Export:
+      Name: CloudTrailDeliveryStreamRole
+  CloudWatchToKinesisRole:
+    Description: A reference to the CloudWatch To Kinesis Role
+    Value: !GetAtt CloudWatchToKinesisRole.Arn
+    Export:
+      Name: CloudWatchToKinesisRole
+
+
+      

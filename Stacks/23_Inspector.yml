@@ -1,0 +1,21 @@
+Resources:
+  InspectorResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties: 
+      Name: InspectorRG
+      Description: Inspector Resource Group
+      ResourceQuery: 
+        Query: 
+          ResourceTypeFilters: 
+            - "AWS::EC2::Instance"
+          TagFilters: 
+            - Key: AllowInspector
+              Values: 
+                - Enabled
+        Type: TAG_FILTERS_1_0
+
+  Inspector:
+    Type: AWS::Inspector::AssessmentTarget
+    Properties: 
+      AssessmentTargetName: ComputeInspection
+      ResourceGroupArn: !GetAtt InspectorRG.Arn

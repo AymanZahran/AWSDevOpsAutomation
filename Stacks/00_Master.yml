@@ -20,30 +20,43 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/01_IAM.yml
-  SSM:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/02_SSM.yml
-    DependsOn: [IAM]
   Storage:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/03_Storage.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/02_Storage.yml
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucketName
         ArtifactsBucketName: !Ref ArtifactsBucketName
-    DependsOn: [IAM]
+  CloudWatch:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/03_CloudWatch.yml
+  Kinesis:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/04_Kinesis.yml
+    DependsOn: [CloudWatch, IAM, Storage]
+  CloudWatchSubscriptions:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/05_CloudWatchSubscriptions.yml
+    DependsOn: [CloudWatch, IAM, Storage, Kinesis]
+  SSM:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/06_SSM.yml
+    DependsOn: [CloudWatch]
   CloudTrail:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/04_CloudTrail.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/07_CloudTrail.yml
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucketName
-    DependsOn: [IAM, Storage]
+    DependsOn: [IAM, Storage, CloudWatch]
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/05_Networking.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/08_Networking.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -51,7 +64,7 @@ Resources:
   Firewalls:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/06_Firewalls.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/09_Firewalls.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -59,7 +72,7 @@ Resources:
   NATInstances:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/07_NATInstances.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/10_NATInstances.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -67,7 +80,7 @@ Resources:
   BastionHost:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/08_BastionHost.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/11_BastionHost.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -77,7 +90,7 @@ Resources:
   ALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/09_ALB.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/12_ALB.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -88,27 +101,27 @@ Resources:
   EC2ASG:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/10_EC2ASG.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/13_EC2ASG.yml
       Tags:
         - Key: Env
           Value: Dev
       Parameters:
         Subnets: !GetAtt Networking.Outputs.PrivateSubnets
-    DependsOn: [ALB, NATInstances]
+    DependsOn: [ALB, NATInstances, SSM]
   ECSCluster:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/11_ECSCluster.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/14_ECSCluster.yml
       Tags:
         - Key: Env
           Value: Dev
       Parameters:
         Subnets: !GetAtt Networking.Outputs.PrivateSubnets
-    DependsOn: [ALB, NATInstances]
+    DependsOn: [ALB, NATInstances, SSM]
   TaskDefinition:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/12_ECSTaskDefinition.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/15_TaskDefinition.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -116,7 +129,7 @@ Resources:
   ECSEC2Services:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/13_ECSEC2Services.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/16_ECSEC2Services.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -126,7 +139,7 @@ Resources:
   ECSFargateServices:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/14_ECSFargateServices.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/17_ECSFargateServices.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -136,7 +149,7 @@ Resources:
   CodeCommit:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/15_CodeCommit.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/18_CodeCommit.yml
       Parameters:
         StacksBucketName: !Ref StacksBucketName
         CodeCommitRepoName: !Ref CodeCommitRepoName
@@ -144,24 +157,29 @@ Resources:
   ECR:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/16_ECR.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/19_ECR.yml
       Parameters:
         ECRRepoName: !Ref ECRRepoName
     DependsOn: [IAM, CloudTrail]
   CodeBuild:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/17_CodeBuild.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/20_CodeBuild.yml
     DependsOn: [CodeCommit, ECR]
   CodeDeploy:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/18_CodeDeploy.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/21_CodeDeploy.yml
     DependsOn: [CodeCommit, ECR, CodeBuild, EC2ASG]
   CodePipeline:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/19_CodePipeline.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/22_CodePipeline.yml
       Parameters:
         ArtifactsBucketName: !Ref ArtifactsBucketName
     DependsOn: [CodeCommit, ECR, CodeBuild, CodeDeploy, EC2ASG, ECSEC2Services, ECSFargateServices]
+  Inspector:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/23_Inspector.yml
+    DependsOn: [CodePipeline]

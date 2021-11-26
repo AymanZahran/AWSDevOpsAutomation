@@ -1,0 +1,154 @@
+Parameters:
+  CloudTrailLogGroupName: 
+    Description: Cloud Trail Log Group Name
+    Type: String
+    Default: CloudTrail-LogGroup
+  CloudTrailLogGroupRetention: 
+    Description: Cloud Trail Log Group Retention
+    Type: Number
+    Default: 365
+  CloudWatchAgentLogGroupName: 
+    Description: CloudWatch Log Group Name
+    Type: String
+    Default: CloudWatch-LogGroup
+  CloudWatchAgentLogGroupRetention: 
+    Description: CloudWatch Log Group Retention
+    Type: Number
+    Default: 365
+  HTTPAccessLogGroupName: 
+    Description: HTTP Access Log Group Name
+    Type: String
+    Default: HTTPAccess-LogGroup
+  HTTPAccessLogGroupRetention: 
+    Description: HTTP Access Log Group Retention
+    Type: Number
+    Default: 365
+  CodeDeployAgentLogGroupName: 
+    Description: CodeDeploy Log Group Name
+    Type: String
+    Default: CodeDeploy-LogGroup
+  CodeDeployAgentLogGroupRetention: 
+    Description: CodeDeploy Log Group Retention
+    Type: Number
+    Default: 365
+  ECSAgentLogGroupName: 
+    Description: ECSAgent Log Group Name
+    Type: String
+    Default: ECSAgent-LogGroup
+  ECSAgentLogGroupRetention: 
+    Description: ECSAgent Log Group Retention
+    Type: Number
+    Default: 365
+  ECSTasksLogGroupName: 
+    Description: ECSTasks Log Group Name
+    Type: String
+    Default: ECSTasks-LogGroup
+  ECSTasksLogGroupRetention: 
+    Description: ECSTasks Log Group Retention
+    Type: Number
+    Default: 365
+  DeliveryStreamLogGroupName: 
+    Description: DeliveryStream Log Group Name
+    Type: String
+    Default: DeliveryStream-LogGroup
+  DeliveryStreamLogGroupRetention: 
+    Description: DeliveryStream Log Group Retention
+    Type: Number
+    Default: 365
+  CloudTrailDeliveryStreamLogStreamName: 
+    Description: CloudTrail Delivery Stream Log Stream Name
+    Type: String 
+    Default: CloudTrailDeliveryStreamLogStream
+
+    
+
+Resources: 
+  CloudTrailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref CloudTrailLogGroupName
+      RetentionInDays: !Ref CloudTrailLogGroupRetention
+  CloudWatchAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref CloudWatchAgentLogGroupName
+      RetentionInDays: !Ref CloudWatchAgentLogGroupRetention
+  HTTPAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref HTTPAccessLogGroupName
+      RetentionInDays: !Ref HTTPAccessLogGroupRetention
+  CodeDeployAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref CodeDeployAgentLogGroupName
+      RetentionInDays: !Ref CodeDeployAgentLogGroupRetention
+  ECSAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref ECSAgentLogGroupName
+      RetentionInDays: !Ref ECSAgentLogGroupRetention
+  ECSTasksLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref ECSTasksLogGroupName
+      RetentionInDays: !Ref ECSTasksLogGroupRetention
+  DeliveryStreamLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref DeliveryStreamLogGroupName
+      RetentionInDays: !Ref DeliveryStreamLogGroupRetention
+  
+  CloudTrailDeliveryStreamLogStream:
+    Type: AWS::Logs::LogStream
+    Properties: 
+      LogGroupName: !Ref DeliveryStreamLogGroup
+      LogStreamName: CloudTrailDeliveryStreamLogStream
+
+Outputs:
+  CloudTrailLogGroupName:
+    Description: A reference to the CloudTrail Log Group Name
+    Value: !Ref CloudTrailLogGroupName
+    Export:
+      Name: CloudTrailLogGroupName
+  CloudTrailLogGroup:
+    Description: A reference to the CloudTrail Log Group Arn
+    Value: !GetAtt CloudTrailLogGroup.Arn
+    Export:
+      Name: CloudTrailLogGroup
+  CloudWatchAgentLogGroupName:
+    Description: A reference to the CloudWatchAgent Log Group Name
+    Value: !Ref CloudWatchAgentLogGroupName
+    Export:
+      Name: CloudWatchAgentLogGroupName
+  HTTPAccessLogGroupName:
+    Description: A reference to the HTTP Access Log Group Name
+    Value: !Ref HTTPAccessLogGroupName
+    Export:
+      Name: HTTPAccessLogGroupName
+  CodeDeployAgentLogGroupName:
+    Description: A reference to the CodeDeploy Agent Log Group Name
+    Value: !Ref CodeDeployAgentLogGroupName
+    Export:
+      Name: CodeDeployAgentLogGroupName
+  ECSAgentLogGroupName:
+    Description: A reference to the ECSAgent Log Group Name
+    Value: !Ref ECSAgentLogGroupName
+    Export:
+      Name: ECSAgentLogGroupName
+  ECSTasksLogGroup:
+    Description: A reference to the ECSTasks Log Group
+    Value: !Ref ECSTasksLogGroup
+    Export:
+      Name: ECSTasksLogGroup
+  DeliveryStreamLogGroupName:
+    Description: A reference to the DeliveryStream Log Group Name
+    Value: !Ref DeliveryStreamLogGroupName
+    Export:
+      Name: DeliveryStreamLogGroupName
+  CloudTrailDeliveryStreamLogStreamName:
+    Description: A reference to the CloudTrail Delivery Stream Log Stream Name
+    Value: !Ref CloudTrailDeliveryStreamLogStreamName
+    Export:
+      Name: CloudTrailDeliveryStreamLogStreamName
+
