@@ -1,11 +1,4 @@
 Resources:
-  # CloudTrailLogsDestination:
-  #   Type: AWS::Logs::Destination
-  #   Properties: 
-  #     DestinationName: CloudTrailLogsToKinesis
-  #     DestinationPolicy: String
-  #     RoleArn: String
-  #     TargetArn: !Ref CloudTrailDataStream
   CloudWatchLogsSubscription:
     Type: AWS::Logs::SubscriptionFilter
     Properties: 

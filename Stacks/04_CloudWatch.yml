@@ -10,7 +10,7 @@ Parameters:
   CloudWatchAgentLogGroupName: 
     Description: CloudWatch Log Group Name
     Type: String
-    Default: CloudWatch-LogGroup
+    Default: CloudWatchAgent-LogGroup
   CloudWatchAgentLogGroupRetention: 
     Description: CloudWatch Log Group Retention
     Type: Number
@@ -26,7 +26,7 @@ Parameters:
   CodeDeployAgentLogGroupName: 
     Description: CodeDeploy Log Group Name
     Type: String
-    Default: CodeDeploy-LogGroup
+    Default: CodeDeployAgent-LogGroup
   CodeDeployAgentLogGroupRetention: 
     Description: CodeDeploy Log Group Retention
     Type: Number

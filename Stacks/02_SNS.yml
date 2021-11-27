@@ -1,0 +1,41 @@
+Parameters:
+  Endpoint: 
+    Description: Email Address of the SNS Subscription
+    Type: String
+
+Resources:
+  DritedStacksSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: DritedStacksSNSTopic
+      TopicName: DritedStacksSNSTopic
+  DritedStacksSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: 
+      Endpoint: !Ref Endpoint
+      Protocol: email
+      TopicArn: !Ref DritedStacksSNSTopic
+
+  PipelineFailueSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: 
+      DisplayName: PipelineFailueSNSTopic
+      TopicName: PipelineFailueSNSTopic
+  PipelineFailueSNSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties: 
+      Endpoint: !Ref Endpoint
+      Protocol: email
+      TopicArn: !Ref PipelineFailueSNSTopic
+
+Outputs:
+  DritedStacksSNSTopic:
+    Description: A reference to the DritedStacksSNSTopic
+    Value: !Ref DritedStacksSNSTopic
+    Export:
+      Name: DritedStacksSNSTopic
+  PipelineFailueSNSTopic:
+    Description: A reference to the PipelineFailueSNSTopic
+    Value: !Ref PipelineFailueSNSTopic
+    Export:
+      Name: PipelineFailueSNSTopic

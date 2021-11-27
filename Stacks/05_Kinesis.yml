@@ -31,6 +31,8 @@ Resources:
           LogGroupName: !ImportValue DeliveryStreamLogGroupName
           LogStreamName: !ImportValue CloudTrailDeliveryStreamLogStreamName
         CompressionFormat: UNCOMPRESSED
+        EncryptionConfiguration:
+          NoEncryptionConfig: NoEncryption
         ErrorOutputPrefix: "Kinesis_ERROR"
         Prefix: "Kinesis"
         RoleARN: !ImportValue CloudTrailDeliveryStreamRole

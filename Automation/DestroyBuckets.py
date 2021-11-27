@@ -6,9 +6,9 @@ s3_Resource = boto3.resource('s3')
 s3_Client = boto3.client('s3')
 
 BucketsList = [
-    "stacks-bucket-" + str(AccountId), 
-    "cloudtrail-bucket-" + str(AccountId), 
-    "artifacts-bucket-" + str(AccountId)
+    "new-stacks-bucket-" + str(AccountId), 
+    "new-cloudtrail-bucket-" + str(AccountId), 
+    "new-artifacts-bucket-" + str(AccountId)
     ]
 
 for i in BucketsList:

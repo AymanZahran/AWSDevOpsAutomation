@@ -1,0 +1,5 @@
+Resources:
+  Inspector:
+    Type: AWS::Inspector::AssessmentTarget
+    Properties: 
+      AssessmentTargetName: ComputeInspection

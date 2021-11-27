@@ -408,6 +408,25 @@ Resources:
                 - events:ListTargetsByRule
                 - events:ListRuleNamesByTarget
               Resource: "*"
+  
+  DetectDriftedStacksLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DetectDriftedStacksLambda-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: DetectDriftedStacksLambda-policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action: "*"
+              Resource: "*"
         
 Outputs:
   NATRole:
@@ -470,6 +489,11 @@ Outputs:
     Value: !GetAtt CloudWatchToKinesisRole.Arn
     Export:
       Name: CloudWatchToKinesisRole
+  DetectDriftedStacksLambdaRole:
+    Description: A reference to the Detect Drifted Stacks Lambda Role
+    Value: !GetAtt DetectDriftedStacksLambdaRole.Arn
+    Export:
+      Name: DetectDriftedStacksLambdaRole
 
 
       

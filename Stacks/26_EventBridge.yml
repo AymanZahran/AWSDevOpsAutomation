@@ -1,0 +1,31 @@
+Resources:
+  DriftedStacksRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Drifted Stack Rule to send SNS"
+      Name: "DriftedStacksRule"
+      ScheduleExpression: rate(15 minutes)
+      State: ENABLED
+      Targets: 
+        - Arn: !ImportValue DetectDriftedStacksLambda
+          Id: DriftedStacksRule
+  
+  PipelineFailueStacksRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Pipeline Failue Rule to send SNS"
+      Name: "PipelineFailueRule"
+      EventPattern:
+        source:
+          - aws.codepipeline
+        detail-type:
+        - CodePipeline Pipeline Execution State Change
+        detail:
+          state:
+          - FAILED
+          - SUPERSEDED
+          - CANCELED
+      State: ENABLED
+      Targets: 
+        - Arn: !ImportValue PipelineFailueSNSTopic
+          Id: PipelineFailueStacksRule

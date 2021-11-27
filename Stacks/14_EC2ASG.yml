@@ -131,8 +131,6 @@ Resources:
             Tags:
               - Key: Name
                 Value: WebServers
-              - Key: AllowInspector
-                Value: Enabled
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
@@ -201,6 +199,8 @@ Resources:
               httpd:
                 enabled: "true"
                 ensureRunning: "true"
+                files: 
+                      - /var/www/html/index.html
         03_config-httpd:
           files:
             "/var/www/html/index.html":

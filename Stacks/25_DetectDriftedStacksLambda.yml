@@ -1,0 +1,87 @@
+Parameters:
+  FunctionName:
+    Description: Detect Drifted Stacks Lambda Function Name
+    Type: String
+    Default: "DetectDriftedStacksLambda"
+  ScanStackName:
+    Description: Name of the of Stack that will be scanned
+    Type: String
+  
+Resources:
+  DetectDriftedStacksLambda:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Architectures: 
+        - x86_64
+      Code: 
+        ZipFile: |
+          import json
+          import logging
+          import time
+          import boto3
+          import os
+          
+
+          # Initialize Logger
+          LOGGER = logging.getLogger()
+          LOGGER.setLevel(logging.INFO)
+
+          # Define CloudFormation stack information
+          STACK_NAME = os.environ['ScanStackName']
+          ROLE_NAME = "AutomaticDriftRemediationRole"
+
+          # Define boto3 clients
+          CF_CLIENT = boto3.client('cloudformation')
+          SNS_CLIENT = boto3.client('sns')
+
+          def handler(event, context):
+              # Initiate a stack drift detection
+              initiate_stack_drift_detection = CF_CLIENT.detect_stack_drift(StackName=STACK_NAME)
+              stack_drift_detection_id = initiate_stack_drift_detection["StackDriftDetectionId"]
+              LOGGER.info("Initiating drift detection.  Stack Drift Detection Id: %s", stack_drift_detection_id)
+              
+              # Wait for the stack drift detection to complete
+              drift_detection_status = ""
+              while drift_detection_status not in ["DETECTION_COMPLETE",  "DETECTION_FAILED"]:
+                  check_stack_drift_detection_status = CF_CLIENT.describe_stack_drift_detection_status(
+                      StackDriftDetectionId=stack_drift_detection_id
+                  )
+                  drift_detection_status = check_stack_drift_detection_status["DetectionStatus"]
+                  # Add artificial delay to avoid throttling by CloudFormation APIs
+                  time.sleep(1)
+              
+              LOGGER.info("Drift detection complete. Stack Drift Status: %s", drift_detection_status)
+              
+              # Check if Drift Detection Failed
+              if drift_detection_status == "DETECTION_FAILED":
+                LOGGER.info("The stack drift detection did not complete successfully for at \
+                            least one resource. Results will be available for resources that \
+                            successfully completed drift detection")
+              
+              # Check if the stack has drifted
+              if check_stack_drift_detection_status["StackDriftStatus"] == "DRIFTED":
+                LOGGER.info("DRIFT DETECTED")
+                MESSAGE = "DRIFT DETECTED"
+                response = SNS_CLIENT.publish(
+                  TargetArn=os.environ['DritedStacksSNSTopic'], Message=MESSAGE)
+              else:
+                LOGGER.info("No drift detected")
+
+      Description: "Detect Drifted Stacks Lambda Function"
+      FunctionName: !Ref FunctionName
+      Handler: index.handler
+      PackageType: Zip
+      Timeout: 60
+      Environment:
+        Variables: 
+          ScanStackName: !Ref ScanStackName
+          DritedStacksSNSTopic: !ImportValue DritedStacksSNSTopic
+      Role: !ImportValue DetectDriftedStacksLambdaRole
+      Runtime: python3.9
+  
+Outputs:
+  DetectDriftedStacksLambda:
+    Description: A reference to the Detect Drifted Stacks Lambda
+    Value: !GetAtt DetectDriftedStacksLambda.Arn
+    Export:
+      Name: DetectDriftedStacksLambda
