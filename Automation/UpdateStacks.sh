@@ -17,7 +17,8 @@ aws --region $AWS_REGION cloudformation update-stack \
     --stack-name Master \
     --template-url "https://$StacksBucketName.s3.$AWS_REGION.amazonaws.com/00_Master.yml" \
     --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-    --parameters ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
+    --parameters ParameterKey=KeyPair,ParameterValue=$KeyPair \
+    ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
     ParameterKey=CloudTrailBucketName,ParameterValue=$CloudTrailBucketName \
     ParameterKey=ArtifactsBucketName,ParameterValue=$ArtifactsBucketName \
     ParameterKey=CodeCommitRepoName,ParameterValue=$CodeCommitRepoName \

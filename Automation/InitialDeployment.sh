@@ -1,5 +1,7 @@
 #!/bin/bash
 ACCOUNT_ID=`aws sts get-caller-identity --query "Account" --output text`
+KeyPair="AWS_KeyPair"
+SNSEndpointMail="ah.zahran@outlook.com"
 StacksBucketName="new-stacks-bucket-$ACCOUNT_ID"
 CloudTrailBucketName="new-cloudtrail-bucket-$ACCOUNT_ID"
 ArtifactsBucketName="new-artifacts-bucket-$ACCOUNT_ID"
@@ -28,8 +30,11 @@ aws --region $AWS_REGION cloudformation create-stack --disable-rollback \
     --stack-name Master \
     --template-url "https://$StacksBucketName.s3.$AWS_REGION.amazonaws.com/00_Master.yml" \
     --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-    --parameters ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
+    --parameters ParameterKey=KeyPair,ParameterValue=$KeyPair \
+    ParameterKey=SNSEndpointMail,ParameterValue=$SNSEndpointMail \
+    ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
     ParameterKey=CloudTrailBucketName,ParameterValue=$CloudTrailBucketName \
     ParameterKey=ArtifactsBucketName,ParameterValue=$ArtifactsBucketName \
     ParameterKey=CodeCommitRepoName,ParameterValue=$CodeCommitRepoName \
     ParameterKey=ECRRepoName,ParameterValue=$ECRRepoName
+    
