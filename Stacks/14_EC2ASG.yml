@@ -5,7 +5,6 @@ Parameters:
   KeyPair:
     Description: KeyPair
     Type: AWS::EC2::KeyPair::KeyName
-    Default: "AWS_KeyPair"
   EC2ASGName:
     Description: EC2 Autoscale Group Name
     Type: String
@@ -200,7 +199,7 @@ Resources:
                 enabled: "true"
                 ensureRunning: "true"
                 files: 
-                      - /var/www/html/index.html
+                  - /var/www/html/index.html
         03_config-httpd:
           files:
             "/var/www/html/index.html":
@@ -252,14 +251,15 @@ Resources:
                     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ssmkey} -s
                   - { ssmkey: !ImportValue WebInstancesSSM }
         08_setup_inspector-agent:
-          01_download_the_inspector_install_file: 
-            command: wget https://inspector-agent.amazonaws.com/linux/latest/install
-          02_give_execution_to_inspector_install_file:
-            command: chmod +x ./install
-          03_install_the_inspector_agent:
-            command: ./install
-          04_remove_the_inspector_install_file:
-            command: rm -f install
+          commands:
+            01_download_the_inspector_install_file: 
+              command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+            02_give_execution_to_inspector_install_file:
+              command: chmod +x ./install
+            03_install_the_inspector_agent:
+              command: ./install
+            04_remove_the_inspector_install_file:
+              command: rm -f install
 
   EC2ASG:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -269,8 +269,8 @@ Resources:
         Timeout: PT15M
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: 1
         MaxBatchSize: 1
+        MinInstancesInService: 1
         PauseTime: PT15M
         WaitOnResourceSignals: true
     Properties:
@@ -289,7 +289,7 @@ Resources:
       TargetGroupARNs:
         - !ImportValue InstanceTargetGroup
       VPCZoneIdentifier: !Ref Subnets
-
+  
   ScalingPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:

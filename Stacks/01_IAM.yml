@@ -427,6 +427,29 @@ Resources:
             - Effect: Allow
               Action: "*"
               Resource: "*"
+
+  DeleteBucketObjectsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DeleteBucketObjectsLambda-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: DeleteBucketObjectsLambda-policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action: 
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - s3:*
+              Resource: "*"
         
 Outputs:
   NATRole:
@@ -494,6 +517,9 @@ Outputs:
     Value: !GetAtt DetectDriftedStacksLambdaRole.Arn
     Export:
       Name: DetectDriftedStacksLambdaRole
+  DeleteBucketObjectsLambdaRole:
+    Description: A reference to the Delete Bucket Objects Lambda Role
+    Value: !GetAtt DeleteBucketObjectsLambdaRole.Arn
+    Export:
+      Name: DeleteBucketObjectsLambdaRole
 
-
-      

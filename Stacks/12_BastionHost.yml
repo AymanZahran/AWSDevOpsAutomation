@@ -2,7 +2,6 @@ Parameters:
   KeyPair:
     Description: KeyPair
     Type: AWS::EC2::KeyPair::KeyName
-    Default: "AWS_KeyPair"
   PublicSubnet:
     Description: Choose the Public Subnets the Bastion Host will be deployed in
     Type: AWS::EC2::Subnet::Id
@@ -103,6 +102,31 @@ Resources:
           Value: BastionHost
         - Key: AllowInspector
           Value: Enabled
+      UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --region ${AWS::Region} --resource BastionHost
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --region ${AWS::Region} --resource BastionHost
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT5M
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              wget: []
+          commands:
+            01_download_the_inspector_install_file: 
+              command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+            02_give_execution_to_inspector_install_file:
+              command: chmod +x ./install
+            03_install_the_inspector_agent:
+              command: ./install
+            04_remove_the_inspector_install_file:
+              command: rm -f install
 
 Outputs:
   BastionHostIP:

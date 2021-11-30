@@ -1,5 +1,76 @@
+
+Mappings:
+  InspectorRulePackagesArn: 
+    us-west-2:
+      CVE: 'arn:aws:inspector:us-west-2:758058086616:rulespackage/0-9hgA516p'
+      CIS: 'arn:aws:inspector:us-west-2:758058086616:rulespackage/0-H5hpSawc'
+      SBP: 'arn:aws:inspector:us-west-2:758058086616:rulespackage/0-JJOtZiqQ'
+      RBA: 'arn:aws:inspector:us-west-2:758058086616:rulespackage/0-vg5GGHSD'
+    us-east-1:
+      CVE: 'arn:aws:inspector:us-east-1:316112463485:rulespackage/0-gEjTy7T7'
+      CIS: 'arn:aws:inspector:us-east-1:316112463485:rulespackage/0-rExsr2X8'
+      SBP: 'arn:aws:inspector:us-east-1:316112463485:rulespackage/0-R01qwB5Q'
+      RBA: 'arn:aws:inspector:us-east-1:316112463485:rulespackage/0-gBONHN9h'
+    us-east-2:
+      CVE: 'arn:aws:inspector:us-east-2:646659390643:rulespackage/0-JnA8Zp85'
+      CIS: 'arn:aws:inspector:us-east-2:646659390643:rulespackage/0-m8r61nnh'
+      SBP: 'arn:aws:inspector:us-east-2:646659390643:rulespackage/0-AxKmMHPX'
+      RBA: 'arn:aws:inspector:us-east-2:646659390643:rulespackage/0-cE4kTR30'
+    us-west-1:
+      CVE: 'arn:aws:inspector:us-west-1:166987590008:rulespackage/0-TKgzoVOa'
+      CIS: 'arn:aws:inspector:us-west-1:166987590008:rulespackage/0-xUY8iRqX'
+      SBP: 'arn:aws:inspector:us-west-1:166987590008:rulespackage/0-byoQRFYm'
+      RBA: 'arn:aws:inspector:us-west-1:166987590008:rulespackage/0-yeYxlt0x'
+    ap-south-1:
+      CVE: 'arn:aws:inspector:ap-south-1:162588757376:rulespackage/0-LqnJE9dO'
+      CIS: 'arn:aws:inspector:ap-south-1:162588757376:rulespackage/0-PSUlX14m'
+      SBP: 'arn:aws:inspector:ap-south-1:162588757376:rulespackage/0-fs0IZZBj'
+      RBA: 'arn:aws:inspector:ap-south-1:162588757376:rulespackage/0-EhMQZy6C'
+    ap-southeast-2:
+      CVE: 'arn:aws:inspector:ap-southeast-2:454640832652:rulespackage/0-D5TGAxiR'
+      CIS: 'arn:aws:inspector:ap-southeast-2:454640832652:rulespackage/0-Vkd2Vxjq'
+      SBP: 'arn:aws:inspector:ap-southeast-2:454640832652:rulespackage/0-asL6HRgN'
+      RBA: 'arn:aws:inspector:ap-southeast-2:454640832652:rulespackage/0-P8Tel2Xj'
+    ap-northeast-2:
+      CVE: 'arn:aws:inspector:ap-northeast-2:526946625049:rulespackage/0-PoGHMznc'
+      CIS: 'arn:aws:inspector:ap-northeast-2:526946625049:rulespackage/0-T9srhg1z'
+      SBP: 'arn:aws:inspector:ap-northeast-2:526946625049:rulespackage/0-2WRpmi4n'
+      RBA: 'arn:aws:inspector:ap-northeast-2:526946625049:rulespackage/0-PoYq7lI7'
+    ap-northeast-1:
+      CVE: 'arn:aws:inspector:ap-northeast-1:406045910587:rulespackage/0-gHP9oWNT'
+      CIS: 'arn:aws:inspector:ap-northeast-1:406045910587:rulespackage/0-7WNjqgGu'
+      SBP: 'arn:aws:inspector:ap-northeast-1:406045910587:rulespackage/0-bBUQnxMq'
+      RBA: 'arn:aws:inspector:ap-northeast-1:406045910587:rulespackage/0-knGBhqEu'
+    eu-west-1:
+      CVE: 'arn:aws:inspector:eu-west-1:357557129151:rulespackage/0-ubA5XvBh'
+      CIS: 'arn:aws:inspector:eu-west-1:357557129151:rulespackage/0-sJBhCr0F'
+      SBP: 'arn:aws:inspector:eu-west-1:357557129151:rulespackage/0-SnojL3Z6'
+      RBA: 'arn:aws:inspector:eu-west-1:357557129151:rulespackage/0-lLmwe1zd'
+    eu-central-1:
+      CVE: 'arn:aws:inspector:eu-central-1:537503971621:rulespackage/0-wNqHa8M9'
+      CIS: 'arn:aws:inspector:eu-central-1:537503971621:rulespackage/0-nZrAVuv8'
+      SBP: 'arn:aws:inspector:eu-central-1:537503971621:rulespackage/0-ZujVHEPB'
+      RBA: 'arn:aws:inspector:eu-central-1:537503971621:rulespackage/0-0GMUM6fg'
+    us-gov-west-1:
+      CVE: 'arn:aws-us-gov:inspector:us-gov-west-1:850862329162:rulespackage/0-4oQgcI4G'
+      CIS: 'arn:aws-us-gov:inspector:us-gov-west-1:850862329162:rulespackage/0-Ac4CFOuc'
+      SBP: 'arn:aws-us-gov:inspector:us-gov-west-1:850862329162:rulespackage/0-rOTGqe5G'
+      RBA: 'arn:aws-us-gov:inspector:us-gov-west-1:850862329162:rulespackage/0-JMyjuzoW'
+
 Resources:
-  Inspector:
+  InspectorAssessmentTarget:
     Type: AWS::Inspector::AssessmentTarget
     Properties: 
-      AssessmentTargetName: ComputeInspection
+      AssessmentTargetName: InspectorAssessmentTarget
+
+  InspectorTemplate:
+    Type: AWS::Inspector::AssessmentTemplate
+    Properties: 
+      AssessmentTargetArn: !GetAtt InspectorAssessmentTarget.Arn
+      AssessmentTemplateName: CheckAll
+      DurationInSeconds: 900
+      RulesPackageArns: 
+        - !FindInMap [InspectorRulePackagesArn, !Ref "AWS::Region", CVE]
+        - !FindInMap [InspectorRulePackagesArn, !Ref "AWS::Region", CIS]
+        - !FindInMap [InspectorRulePackagesArn, !Ref "AWS::Region", SBP]
+        - !FindInMap [InspectorRulePackagesArn, !Ref "AWS::Region", RBA]

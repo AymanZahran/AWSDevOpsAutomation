@@ -34,7 +34,6 @@ Resources:
         EncryptionConfiguration:
           NoEncryptionConfig: NoEncryption
         ErrorOutputPrefix: "Kinesis_ERROR"
-        Prefix: "Kinesis"
         RoleARN: !ImportValue CloudTrailDeliveryStreamRole
 
 Outputs:

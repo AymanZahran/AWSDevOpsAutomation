@@ -2,7 +2,6 @@ Parameters:
   KeyPair:
     Description: KeyPair
     Type: AWS::EC2::KeyPair::KeyName
-    Default: "AWS_KeyPair"
   InstanceType:
     Type: String
     Default: t2.micro
@@ -128,6 +127,7 @@ Resources:
             - 01_setupCfnHup
             - 02_setup-jq
             - 03_setup-NAT
+            - 04_setup_inspector-agent
           Update:
             - 03_setup-NAT
         # Cfn-hup setting, it is to monitor the change of metadata.
@@ -189,13 +189,23 @@ Resources:
                 /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
                 yum install -y iptables-services
                 service iptables save
+        04_setup_inspector-agent:
+          commands:
+            01_download_the_inspector_install_file: 
+              command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+            02_give_execution_to_inspector_install_file:
+              command: chmod +x ./install
+            03_install_the_inspector_agent:
+              command: ./install
+            04_remove_the_inspector_install_file:
+              command: rm -f install
                 
   NATASG1:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
         Count: 1
-        Timeout: PT15M
+        Timeout: PT5M
     Properties:
       AutoScalingGroupName: NATASG1
       Cooldown: 300
@@ -248,6 +258,7 @@ Resources:
             - 01_setupCfnHup
             - 02_setup-jq
             - 03_setup-NAT
+            - 04_setup_inspector-agent
           Update:
             - 03_setup-NAT
         # Cfn-hup setting, it is to monitor the change of metadata.
@@ -309,13 +320,23 @@ Resources:
                 /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
                 yum install -y iptables-services
                 service iptables save
+        04_setup_inspector-agent:
+          commands:
+            01_download_the_inspector_install_file: 
+              command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+            02_give_execution_to_inspector_install_file:
+              command: chmod +x ./install
+            03_install_the_inspector_agent:
+              command: ./install
+            04_remove_the_inspector_install_file:
+              command: rm -f install
                 
   NATASG2:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
         Count: 1
-        Timeout: PT15M
+        Timeout: PT5M
     Properties:
       AutoScalingGroupName: NATASG2
       Cooldown: 300
@@ -368,6 +389,7 @@ Resources:
             - 01_setupCfnHup
             - 02_setup-jq
             - 03_setup-NAT
+            - 04_setup_inspector-agent
           Update:
             - 03_setup-NAT
         # Cfn-hup setting, it is to monitor the change of metadata.
@@ -429,13 +451,23 @@ Resources:
                 /sbin/iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
                 yum install -y iptables-services
                 service iptables save
+        04_setup_inspector-agent:
+          commands:
+            01_download_the_inspector_install_file: 
+              command: wget https://inspector-agent.amazonaws.com/linux/latest/install
+            02_give_execution_to_inspector_install_file:
+              command: chmod +x ./install
+            03_install_the_inspector_agent:
+              command: ./install
+            04_remove_the_inspector_install_file:
+              command: rm -f install
                 
   NATASG3:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
         Count: 1
-        Timeout: PT15M
+        Timeout: PT5M
     Properties:
       AutoScalingGroupName: NATASG3
       Cooldown: 300

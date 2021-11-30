@@ -1,4 +1,10 @@
 Parameters:
+  KeyPair:
+    Description: KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
+  SNSEndpointMail:
+    Description: SNSEndpointMail
+    Type: String
   StacksBucketName:
     Description: Bucket Name for the Cloudformation Stacks
     Type: String
@@ -25,7 +31,7 @@ Resources:
     Properties:
       TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/02_SNS.yml
       Parameters:
-        Endpoint: "ah.zahran@outlook.com"
+        Endpoint: !Ref SNSEndpointMail
   Storage:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -82,6 +88,8 @@ Resources:
       Tags:
         - Key: Env
           Value: Dev
+      Parameters:
+        KeyPair: !Ref KeyPair
     DependsOn: [Networking, Firewalls]
   BastionHost:
     Type: AWS::CloudFormation::Stack
@@ -92,6 +100,7 @@ Resources:
           Value: Dev
       Parameters:
         PublicSubnet: !GetAtt Networking.Outputs.PublicSubnet1
+        KeyPair: !Ref KeyPair
     DependsOn: [Networking, Firewalls]
   ALB:
     Type: AWS::CloudFormation::Stack
@@ -113,6 +122,7 @@ Resources:
           Value: Dev
       Parameters:
         Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+        KeyPair: !Ref KeyPair
     DependsOn: [ALB, NATInstances, SSM]
   ECSCluster:
     Type: AWS::CloudFormation::Stack
@@ -123,6 +133,7 @@ Resources:
           Value: Dev
       Parameters:
         Subnets: !GetAtt Networking.Outputs.PrivateSubnets
+        KeyPair: !Ref KeyPair
     DependsOn: [ALB, NATInstances, SSM]
   TaskDefinition:
     Type: AWS::CloudFormation::Stack
@@ -195,9 +206,19 @@ Resources:
       TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/25_DetectDriftedStacksLambda.yml
       Parameters:
         ScanStackName: "Master"
-    DependsOn: [CodePipeline]
+    DependsOn: [CodePipeline, SNS]
   EventBridge:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/26_EventBridge.yml
     DependsOn: [DetectDriftedStacksLambda, SNS]
+  DeleteBucketObjectsLambda:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/27_DeleteBucketObjectsLambda.yml
+      Parameters:
+        StacksBucketName: !Ref StacksBucketName
+        CloudTrailBucketName: !Ref CloudTrailBucketName
+        ArtifactsBucketName: !Ref ArtifactsBucketName
+    DependsOn: [IAM]
+

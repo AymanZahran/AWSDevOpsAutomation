@@ -25,7 +25,7 @@ Resources:
       ProtocolVersion: HTTP1
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 10
+          Value: 120
       Tags: 
         - Key: Name
           Value: InstanceTargetGroup
@@ -51,7 +51,7 @@ Resources:
       ProtocolVersion: HTTP1
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 10
+          Value: 120
       Tags: 
         - Key: Name
           Value: IPTargetGroup
