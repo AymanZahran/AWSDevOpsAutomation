@@ -1,0 +1,106 @@
+Parameters:
+  CloudTrailDataStreamName:
+    Description: CloudTrail Data Stream Name
+    Type: String
+    Default: "CloudTrailDataStream"
+  CloudTrailDeliveryStreamName:
+    Description: CloudTrail Delivery Stream Name
+    Type: String
+    Default: "CloudTrailDeliveryStream"
+  VarLogMessagesDataStreamName:
+    Description: VarLogMessages Data Stream Name
+    Type: String
+    Default: "VarLogMessagesDataStream"
+  VarLogMessagesDeliveryStreamName:
+    Description: VarLogMessages Delivery Stream Name
+    Type: String
+    Default: "VarLogMessagesDeliveryStream"
+
+Resources:
+  CloudTrailDataStream:
+    Type: AWS::Kinesis::Stream
+    Properties: 
+      Name: !Ref CloudTrailDataStreamName
+      RetentionPeriodHours: 24
+      ShardCount: 1
+
+  CloudTrailDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties: 
+      DeliveryStreamName: !Ref CloudTrailDeliveryStreamName
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration: 
+        KinesisStreamARN: !GetAtt CloudTrailDataStream.Arn
+        RoleARN: !ImportValue DeliveryStreamRole
+      ExtendedS3DestinationConfiguration: 
+        BucketARN: !ImportValue CloudTrailBucket
+        CloudWatchLoggingOptions: 
+          Enabled: True
+          LogGroupName: !ImportValue DeliveryStreamLogGroupName
+          LogStreamName: !ImportValue CloudTrailDeliveryStreamLogStreamName
+        CompressionFormat: UNCOMPRESSED
+        EncryptionConfiguration:
+          NoEncryptionConfig: NoEncryption
+        Prefix: "Output_AWSLogs_"
+        ErrorOutputPrefix: "Error_AWSLogs_"
+        RoleARN: !ImportValue DeliveryStreamRole
+        ProcessingConfiguration:
+          Enabled: True
+          Processors: 
+            - Parameters: 
+                - ParameterName: LambdaArn
+                  ParameterValue: !ImportValue FirehoseDataTransformationLambda
+              Type: Lambda
+        S3BackupMode: Enabled
+        S3BackupConfiguration:
+          BucketARN: !ImportValue CloudTrailBucket
+          CloudWatchLoggingOptions: 
+            Enabled: True
+            LogGroupName: !ImportValue DeliveryStreamLogGroupName
+            LogStreamName: !ImportValue CloudTrailDeliveryStreamBackupLogStreamName
+          CompressionFormat: UNCOMPRESSED
+          EncryptionConfiguration:
+            NoEncryptionConfig: NoEncryption
+          Prefix: "Backup_AWSLogs_"
+          ErrorOutputPrefix: "ERROR_AWSLogs_"
+          RoleARN: !ImportValue DeliveryStreamRole
+
+  VarLogMessagesDataStream:
+    Type: AWS::Kinesis::Stream
+    Properties: 
+      Name: !Ref VarLogMessagesDataStreamName
+      RetentionPeriodHours: 24
+      ShardCount: 1
+
+  VarLogMessagesDeliveryStream:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties: 
+      DeliveryStreamName: !Ref VarLogMessagesDeliveryStreamName
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration: 
+        KinesisStreamARN: !GetAtt VarLogMessagesDataStream.Arn
+        RoleARN: !ImportValue DeliveryStreamRole
+      S3DestinationConfiguration:
+        BucketARN: !ImportValue VarLogMessagesBucket
+        CloudWatchLoggingOptions: 
+          Enabled: True
+          LogGroupName: !ImportValue DeliveryStreamLogGroupName
+          LogStreamName: !ImportValue VarLogMessagesDeliveryStreamLogStreamName
+        CompressionFormat: UNCOMPRESSED
+        EncryptionConfiguration:
+          NoEncryptionConfig: NoEncryption
+        ErrorOutputPrefix: "VarLogMessages_ERROR_"
+        RoleARN: !ImportValue DeliveryStreamRole
+
+Outputs:
+  CloudTrailDataStream:
+    Description: A reference to the CloudTrail Data Stream Arn
+    Value: !GetAtt CloudTrailDataStream.Arn
+    Export:
+      Name: CloudTrailDataStream
+  VarLogMessagesDataStream:
+    Description: A reference to the VarLogMessages Data Stream Arn
+    Value: !GetAtt VarLogMessagesDataStream.Arn
+    Export:
+      Name: VarLogMessagesDataStream
+      

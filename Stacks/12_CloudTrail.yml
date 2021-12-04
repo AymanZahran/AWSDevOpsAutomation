@@ -15,9 +15,18 @@ Resources:
       CloudWatchLogsRoleArn: !ImportValue CloudTrailRole
       EnableLogFileValidation: No
       EventSelectors: 
-        - IncludeManagementEvents: True
+        - DataResources:
+          - Type: AWS::S3::Object
+            Values: 
+              - !Join 
+                - ''
+                - - "arn:aws:s3:::"
+                  - !ImportValue VarLogMessagesBucket
+                  - "/"
+          IncludeManagementEvents: True
           ReadWriteType: All
       IncludeGlobalServiceEvents: True
       IsLogging: Yes
       S3BucketName: !Ref CloudTrailBucketName
+      S3KeyPrefix: "Raw_AWSLogs_"
       TrailName: !Ref TrailName

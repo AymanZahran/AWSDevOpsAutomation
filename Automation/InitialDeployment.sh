@@ -1,13 +1,17 @@
 #!/bin/bash
 ACCOUNT_ID=`aws sts get-caller-identity --query "Account" --output text`
 KeyPair="AWS_KeyPair"
+KeyPath="~/Keys/AWS_KeyPair.pub.pem"
 SNSEndpointMail="ah.zahran@outlook.com"
-StacksBucketName="new-stacks-bucket-$ACCOUNT_ID"
-CloudTrailBucketName="new-cloudtrail-bucket-$ACCOUNT_ID"
-ArtifactsBucketName="new-artifacts-bucket-$ACCOUNT_ID"
-CodeCommitRepoName="new-codecommit-repo-$ACCOUNT_ID"
-ECRRepoName="new-ecr-repo-$ACCOUNT_ID"
-AWS_REGION="us-east-2"
+StacksBucketName="stacks-bucket-$ACCOUNT_ID"
+CloudTrailBucketName="cloudtrail-bucket-$ACCOUNT_ID"
+ArtifactsBucketName="artifacts-bucket-$ACCOUNT_ID"
+VarLogMessagesBucketName="varlogmessages-bucket-$ACCOUNT_ID"
+CodeCommitRepoName="codecommit-repo-$ACCOUNT_ID"
+ECRRepoName="ecr-repo-$ACCOUNT_ID"
+AWS_REGION="us-east-1"
+
+aws ec2 import-key-pair --key-name $KeyPair --public-key-material fileb://$KeyPath
 
 #If Stacks Bucket not exists create one
 IS_BUCKET_EXISTS=`aws s3 ls | awk '{print $3}' | grep -c $StacksBucketName`
@@ -35,6 +39,7 @@ aws --region $AWS_REGION cloudformation create-stack --disable-rollback \
     ParameterKey=StacksBucketName,ParameterValue=$StacksBucketName \
     ParameterKey=CloudTrailBucketName,ParameterValue=$CloudTrailBucketName \
     ParameterKey=ArtifactsBucketName,ParameterValue=$ArtifactsBucketName \
+    ParameterKey=VarLogMessagesBucketName,ParameterValue=$VarLogMessagesBucketName \
     ParameterKey=CodeCommitRepoName,ParameterValue=$CodeCommitRepoName \
     ParameterKey=ECRRepoName,ParameterValue=$ECRRepoName
     

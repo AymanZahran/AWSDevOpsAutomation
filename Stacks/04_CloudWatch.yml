@@ -2,7 +2,7 @@ Parameters:
   CloudTrailLogGroupName: 
     Description: Cloud Trail Log Group Name
     Type: String
-    Default: CloudTrail-LogGroup
+    Default: "/aws/cloudtrail"
   CloudTrailLogGroupRetention: 
     Description: Cloud Trail Log Group Retention
     Type: Number
@@ -10,7 +10,7 @@ Parameters:
   CloudWatchAgentLogGroupName: 
     Description: CloudWatch Log Group Name
     Type: String
-    Default: CloudWatchAgent-LogGroup
+    Default: "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
   CloudWatchAgentLogGroupRetention: 
     Description: CloudWatch Log Group Retention
     Type: Number
@@ -18,7 +18,7 @@ Parameters:
   HTTPAccessLogGroupName: 
     Description: HTTP Access Log Group Name
     Type: String
-    Default: HTTPAccess-LogGroup
+    Default: "/var/log/httpd/access_log"
   HTTPAccessLogGroupRetention: 
     Description: HTTP Access Log Group Retention
     Type: Number
@@ -26,7 +26,7 @@ Parameters:
   CodeDeployAgentLogGroupName: 
     Description: CodeDeploy Log Group Name
     Type: String
-    Default: CodeDeployAgent-LogGroup
+    Default: "/var/log/aws/codedeploy-agent/codedeploy-agent.log"
   CodeDeployAgentLogGroupRetention: 
     Description: CodeDeploy Log Group Retention
     Type: Number
@@ -34,31 +34,47 @@ Parameters:
   ECSAgentLogGroupName: 
     Description: ECSAgent Log Group Name
     Type: String
-    Default: ECSAgent-LogGroup
+    Default: "/var/log/ecs/ecs-agent.log"
   ECSAgentLogGroupRetention: 
     Description: ECSAgent Log Group Retention
+    Type: Number
+    Default: 365
+  KinesisAgentLogGroupName: 
+    Description: Kinesis Agent Log Group Name
+    Type: String
+    Default: "/var/log/aws-kinesis-agent/aws-kinesis-agent.log"
+  KinesisAgentLogGroupRetention: 
+    Description: Kinesis Agent Log Group Retention
     Type: Number
     Default: 365
   ECSTasksLogGroupName: 
     Description: ECSTasks Log Group Name
     Type: String
-    Default: ECSTasks-LogGroup
+    Default: "/aws/ecs/tasks"
   ECSTasksLogGroupRetention: 
     Description: ECSTasks Log Group Retention
     Type: Number
     Default: 365
   DeliveryStreamLogGroupName: 
-    Description: DeliveryStream Log Group Name
+    Description: CloudTrail Delivery Stream Log Group Name
     Type: String
-    Default: DeliveryStream-LogGroup
+    Default: "/aws/kinesis"
   DeliveryStreamLogGroupRetention: 
-    Description: DeliveryStream Log Group Retention
+    Description: CloudTrail Delivery Stream Log Group Retention
     Type: Number
     Default: 365
   CloudTrailDeliveryStreamLogStreamName: 
     Description: CloudTrail Delivery Stream Log Stream Name
     Type: String 
-    Default: CloudTrailDeliveryStreamLogStream
+    Default: "/aws/cloudtrail_backup"
+  CloudTrailDeliveryStreamBackupLogStreamName: 
+    Description: CloudTrail Delivery Stream Backup Log Stream Name
+    Type: String 
+    Default: "/aws/cloudtrail"
+  VarLogMessagesDeliveryStreamLogStreamName: 
+    Description: VarLogMessages Delivery Stream Log Stream Name
+    Type: String 
+    Default: "/var/log/messages"
 
     
 
@@ -88,22 +104,39 @@ Resources:
     Properties: 
       LogGroupName: !Ref ECSAgentLogGroupName
       RetentionInDays: !Ref ECSAgentLogGroupRetention
+  KinesisAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      LogGroupName: !Ref KinesisAgentLogGroupName
+      RetentionInDays: !Ref KinesisAgentLogGroupRetention
   ECSTasksLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       LogGroupName: !Ref ECSTasksLogGroupName
       RetentionInDays: !Ref ECSTasksLogGroupRetention
+  
   DeliveryStreamLogGroup:
     Type: AWS::Logs::LogGroup
     Properties: 
       LogGroupName: !Ref DeliveryStreamLogGroupName
       RetentionInDays: !Ref DeliveryStreamLogGroupRetention
-  
   CloudTrailDeliveryStreamLogStream:
     Type: AWS::Logs::LogStream
     Properties: 
       LogGroupName: !Ref DeliveryStreamLogGroup
-      LogStreamName: CloudTrailDeliveryStreamLogStream
+      LogStreamName: !Ref CloudTrailDeliveryStreamLogStreamName
+  CloudTrailDeliveryStreamBackupLogStream:
+    Type: AWS::Logs::LogStream
+    Properties: 
+      LogGroupName: !Ref DeliveryStreamLogGroup
+      LogStreamName: !Ref CloudTrailDeliveryStreamBackupLogStreamName
+  VarLogMessagesDeliveryStreamLogStream:
+    Type: AWS::Logs::LogStream
+    Properties: 
+      LogGroupName: !Ref DeliveryStreamLogGroup
+      LogStreamName: !Ref VarLogMessagesDeliveryStreamLogStreamName
+
+      
 
 Outputs:
   CloudTrailLogGroupName:
@@ -136,11 +169,22 @@ Outputs:
     Value: !Ref ECSAgentLogGroupName
     Export:
       Name: ECSAgentLogGroupName
+  KinesisAgentLogGroupName:
+    Description: A reference to the KinesisAgent Log Group Name
+    Value: !Ref KinesisAgentLogGroupName
+    Export:
+      Name: KinesisAgentLogGroupName
   ECSTasksLogGroup:
     Description: A reference to the ECSTasks Log Group
     Value: !Ref ECSTasksLogGroup
     Export:
       Name: ECSTasksLogGroup
+  ECSTasksLogGroupName:
+    Description: A reference to the ECSTasks Log Group Name
+    Value: !Ref ECSTasksLogGroupName
+    Export:
+      Name: ECSTasksLogGroupName
+
   DeliveryStreamLogGroupName:
     Description: A reference to the DeliveryStream Log Group Name
     Value: !Ref DeliveryStreamLogGroupName
@@ -151,4 +195,15 @@ Outputs:
     Value: !Ref CloudTrailDeliveryStreamLogStreamName
     Export:
       Name: CloudTrailDeliveryStreamLogStreamName
+  CloudTrailDeliveryStreamBackupLogStreamName:
+    Description: A reference to the CloudTrail Delivery Stream Backup Log Stream Name
+    Value: !Ref CloudTrailDeliveryStreamBackupLogStreamName
+    Export:
+      Name: CloudTrailDeliveryStreamBackupLogStreamName
+  VarLogMessagesDeliveryStreamLogStreamName:
+    Description: A reference to the VarLogMessages Delivery Stream Log Stream Name
+    Value: !Ref VarLogMessagesDeliveryStreamLogStreamName
+    Export:
+      Name: VarLogMessagesDeliveryStreamLogStreamName
+
 

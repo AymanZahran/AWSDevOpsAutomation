@@ -1,0 +1,25 @@
+Resources:
+  VarLogMessageTriggerRule:
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "VarLogMessage Trigger Rule to insert in DynamoDB"
+      Name: "VarLogMessageTriggerRuleRule"
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - s3.amazonaws.com
+          eventName:
+            - PutObject
+          requestParameters:
+            bucketName:
+              - !ImportValue VarLogMessagesBucketName
+      State: ENABLED
+      Targets: 
+        - Arn: !ImportValue InsertVarLogMessagesLambda
+          Id: VarLogMessageTriggerRule
+
+          

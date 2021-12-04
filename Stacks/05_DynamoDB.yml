@@ -1,0 +1,50 @@
+Parameters:
+  VarLogMessagesTableName:
+    Description: VarLogMessages Table Name
+    Type: String
+    Default: "VarLogMessages"
+  VarLogMessagesTableReadCapacityUnits:
+    Description: VarLogMessages Table Read Capacity Units
+    Type: Number
+    Default: 5
+  VarLogMessagesTableWriteCapacityUnits:
+    Description: VarLogMessages Table Write Capacity Units
+    Type: Number
+    Default: 5
+
+Resources:
+  VarLogMessagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      AttributeDefinitions: 
+        - AttributeName: MessageId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+        # - AttributeName: hostname
+        #   AttributeType: S
+        # - AttributeName: program
+        #   AttributeType: S
+        # - AttributeName: processid
+        #   AttributeType: S
+        # - AttributeName: message
+        #   AttributeType: S
+      BillingMode: PROVISIONED
+      ContributorInsightsSpecification: 
+        Enabled: True
+      KeySchema: 
+        - AttributeName: MessageId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      ProvisionedThroughput: 
+        ReadCapacityUnits: !Ref VarLogMessagesTableReadCapacityUnits
+        WriteCapacityUnits: !Ref VarLogMessagesTableWriteCapacityUnits
+      TableName: !Ref VarLogMessagesTableName
+
+Outputs:
+  VarLogMessagesTableName:
+    Description: VarLogMessages Table Name
+    Value: !Ref VarLogMessagesTable
+    Export:
+      Name: VarLogMessagesTableName

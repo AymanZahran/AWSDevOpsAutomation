@@ -3,14 +3,6 @@ Parameters:
     Description: Container Port
     Type: Number
     Default: 80
-  ECSTasksLogsGroupName: 
-    Description: ECS Tasks Log Group
-    Type: String
-    Default: ECSTasksLogGroup
-  ECSTasksLogsGroupRetention: 
-    Description: ECS Tasks Log Group Retention
-    Type: Number
-    Default: 365
   ECSContainerName:
     Description: ECS Container Name
     Type: String
@@ -62,9 +54,9 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !ImportValue ECSTasksLogGroup
+              awslogs-group: !ImportValue ECSTasksLogGroupName
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: "StreamPrefix"
+              awslogs-stream-prefix: !Ref ECSContainerName
 
 Outputs:
   TaskDefinition:

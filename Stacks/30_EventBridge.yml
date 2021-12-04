@@ -19,12 +19,12 @@ Resources:
         source:
           - aws.codepipeline
         detail-type:
-        - CodePipeline Pipeline Execution State Change
+          - CodePipeline Pipeline Execution State Change
         detail:
           state:
-          - FAILED
-          - SUPERSEDED
-          - CANCELED
+            - FAILED
+            - SUPERSEDED
+            - CANCELED
       State: ENABLED
       Targets: 
         - Arn: !ImportValue PipelineFailueSNSTopic

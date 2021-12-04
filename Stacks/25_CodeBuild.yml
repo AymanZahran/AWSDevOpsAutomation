@@ -26,9 +26,8 @@ Resources:
         Type: LINUX_CONTAINER
       LogsConfig:
         CloudWatchLogs:
-          GroupName: Codebuild
+          GroupName: !Sub "/aws/codebuild/${BuildProjectName}"
           Status: ENABLED
-          StreamName: PrepareDockerImages
       Name: !Ref BuildProjectName
       ResourceAccessRole: !ImportValue CodeBuildRole
       ServiceRole: !ImportValue CodeBuildRole

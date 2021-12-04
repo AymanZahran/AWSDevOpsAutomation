@@ -153,11 +153,16 @@ Resources:
             - 05_setup-amazon-cloudwatch-agent
             - 06_config-amazon-cloudwatch-agent
             - 07_restart_amazon-cloudwatch-agent
-            - 08_setup_inspector-agent
+            - 08_setup-amazon-kinesis-agent
+            - 09_config-amazon-kinesis-agent
+            - 10_restart-amazon-kinesis-agent
+            - 11_setup_inspector-agent
           Update:
             - 03_config-httpd
             - 06_config-amazon-cloudwatch-agent
             - 07_restart_amazon-cloudwatch-agent
+            - 09_config-amazon-kinesis-agent
+            - 10_restart-amazon-kinesis-agent
         # Cfn-hup setting, it is to monitor the change of metadata.
         # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
         01_setupCfnHup:
@@ -250,7 +255,39 @@ Resources:
                   - |
                     /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${ssmkey} -s
                   - { ssmkey: !ImportValue WebInstancesSSM }
-        08_setup_inspector-agent:
+        
+        08_setup-amazon-kinesis-agent:
+          packages:
+            yum: 
+              aws-kinesis-agent: []
+        09_config-amazon-kinesis-agent:
+          commands:
+            01_kinesis-user-permission:
+              command: chown -R  aws-kinesis-agent-user:aws-kinesis-agent-user /var/log/messages 
+          files:
+            "/etc/aws-kinesis/agent.json":
+              content: |
+                { 
+                  "flows": [
+                    { 
+                        "filePattern": "/var/log/messages", 
+                        "kinesisStream": "VarLogMessagesDataStream",
+                        "dataProcessingOptions": [
+                            {
+                              "optionName": "LOGTOJSON",
+                              "logFormat": "SYSLOG"
+                            }
+                        ]
+                    } 
+                  ] 
+                } 
+        10_restart-amazon-kinesis-agent:
+          commands:
+            01_stop_service:
+              command: sudo service aws-kinesis-agent stop
+            02_start_service:
+              command: sudo service aws-kinesis-agent start
+        11_setup_inspector-agent:
           commands:
             01_download_the_inspector_install_file: 
               command: wget https://inspector-agent.amazonaws.com/linux/latest/install

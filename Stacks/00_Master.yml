@@ -14,6 +14,9 @@ Parameters:
   ArtifactsBucketName:
     Description: Bucket Name for Artifacts Stages Transitions
     Type: String
+  VarLogMessagesBucketName:
+    Description: Bucket Name for VarLogMessages
+    Type: String
   CodeCommitRepoName:
     Description: CodeCommit Repo Name
     Type: String
@@ -39,36 +42,56 @@ Resources:
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucketName
         ArtifactsBucketName: !Ref ArtifactsBucketName
+        VarLogMessagesBucketName: !Ref VarLogMessagesBucketName
   CloudWatch:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/04_CloudWatch.yml
-  Kinesis:
+  DynamoDB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/05_Kinesis.yml
-    DependsOn: [CloudWatch, IAM, Storage]
-  CloudWatchSubscriptions:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/05_DynamoDB.yml
+  InsertVarLogMessagesLambda:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/06_CloudWatchSubscriptions.yml
-    DependsOn: [CloudWatch, IAM, Storage, Kinesis]
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/06_InsertVarLogMessagesLambda.yml
+    DependsOn: [IAM, Storage, DynamoDB]  
+  VarLogMessagesTrigger:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/07_VarLogMessagesTrigger.yml
+    DependsOn: [Storage, DynamoDB, InsertVarLogMessagesLambda]
   SSM:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/07_SSM.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/08_SSM.yml
     DependsOn: [CloudWatch]
+  FirehoseDataTransformationLambda:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/09_FirehoseDataTransformationLambda.yml
+    DependsOn: [IAM]
+  Kinesis:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/10_Kinesis.yml
+    DependsOn: [CloudWatch, IAM, Storage, FirehoseDataTransformationLambda]
+  CloudWatchSubscriptions:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/11_CloudWatchSubscriptions.yml
+    DependsOn: [CloudWatch, IAM, Storage, Kinesis]
   CloudTrail:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/08_CloudTrail.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/12_CloudTrail.yml
       Parameters:
         CloudTrailBucketName: !Ref CloudTrailBucketName
     DependsOn: [IAM, Storage, CloudWatch]
   Networking:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/09_Networking.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/13_Networking.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -76,25 +99,15 @@ Resources:
   Firewalls:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/10_Firewalls.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/14_Firewalls.yml
       Tags:
         - Key: Env
           Value: Dev
     DependsOn: [Networking]
-  NATInstances:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/11_NATInstances.yml
-      Tags:
-        - Key: Env
-          Value: Dev
-      Parameters:
-        KeyPair: !Ref KeyPair
-    DependsOn: [Networking, Firewalls]
   BastionHost:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/12_BastionHost.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/15_BastionHost.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -102,10 +115,20 @@ Resources:
         PublicSubnet: !GetAtt Networking.Outputs.PublicSubnet1
         KeyPair: !Ref KeyPair
     DependsOn: [Networking, Firewalls]
+  NATInstances:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/16_NATInstances.yml
+      Tags:
+        - Key: Env
+          Value: Dev
+      Parameters:
+        KeyPair: !Ref KeyPair
+    DependsOn: [Networking, Firewalls]
   ALB:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/13_ALB.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/17_ALB.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -116,7 +139,7 @@ Resources:
   EC2ASG:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/14_EC2ASG.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/18_EC2ASG.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -127,7 +150,7 @@ Resources:
   ECSCluster:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/15_ECSCluster.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/19_ECSCluster.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -138,7 +161,7 @@ Resources:
   TaskDefinition:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/16_TaskDefinition.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/20_TaskDefinition.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -146,7 +169,7 @@ Resources:
   ECSEC2Services:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/17_ECSEC2Services.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/21_ECSEC2Services.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -156,7 +179,7 @@ Resources:
   ECSFargateServices:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/18_ECSFargateServices.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/22_ECSFargateServices.yml
       Tags:
         - Key: Env
           Value: Dev
@@ -166,7 +189,7 @@ Resources:
   CodeCommit:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/19_CodeCommit.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/23_CodeCommit.yml
       Parameters:
         StacksBucketName: !Ref StacksBucketName
         CodeCommitRepoName: !Ref CodeCommitRepoName
@@ -174,51 +197,53 @@ Resources:
   ECR:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/20_ECR.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/24_ECR.yml
       Parameters:
         ECRRepoName: !Ref ECRRepoName
     DependsOn: [IAM, CloudTrail]
   CodeBuild:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/21_CodeBuild.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/25_CodeBuild.yml
     DependsOn: [CodeCommit, ECR]
   CodeDeploy:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/22_CodeDeploy.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/26_CodeDeploy.yml
     DependsOn: [CodeCommit, ECR, CodeBuild, EC2ASG]
   CodePipeline:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/23_CodePipeline.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/27_CodePipeline.yml
       Parameters:
         ArtifactsBucketName: !Ref ArtifactsBucketName
     DependsOn: [CodeCommit, ECR, CodeBuild, CodeDeploy, EC2ASG, ECSEC2Services, ECSFargateServices]
   Inspector:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/24_Inspector.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/28_Inspector.yml
     DependsOn: [CodePipeline]
   DetectDriftedStacksLambda:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/25_DetectDriftedStacksLambda.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/29_DetectDriftedStacksLambda.yml
       Parameters:
         ScanStackName: "Master"
     DependsOn: [CodePipeline, SNS]
   EventBridge:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/26_EventBridge.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/30_EventBridge.yml
     DependsOn: [DetectDriftedStacksLambda, SNS]
-  DeleteBucketObjectsLambda:
+  CleanUpLambda:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/27_DeleteBucketObjectsLambda.yml
+      TemplateURL: !Sub https://${StacksBucketName}.s3.${AWS::Region}.amazonaws.com/31_CleanUpLambda.yml
       Parameters:
         StacksBucketName: !Ref StacksBucketName
         CloudTrailBucketName: !Ref CloudTrailBucketName
         ArtifactsBucketName: !Ref ArtifactsBucketName
-    DependsOn: [IAM]
+        VarLogMessagesBucketName: !Ref VarLogMessagesBucketName
+        ECRRepoName: !Ref ECRRepoName
+    DependsOn: [IAM, Storage, ECR]
 

@@ -5,6 +5,9 @@ Parameters:
   ArtifactsBucketName:
     Description: Bucket Name for Artifacts Stages Transitions
     Type: String
+  VarLogMessagesBucketName:
+    Description: Bucket Name for VarLogMessages
+    Type: String
 
 Resources:
   CloudTrailBucket:
@@ -55,6 +58,27 @@ Resources:
             Resource: !Sub "arn:aws:s3:::${ArtifactsBucketName}/*"
             Principal:
               Service: ec2.amazonaws.com
+  VarLogMessagesBucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration: 
+          - BucketKeyEnabled: True
+            ServerSideEncryptionByDefault: 
+              SSEAlgorithm: AES256
+      BucketName: !Ref VarLogMessagesBucketName
+  VarLogMessagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VarLogMessagesBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudTrail
+            Effect: Allow
+            Action: s3:*
+            Resource: !Sub "arn:aws:s3:::${VarLogMessagesBucketName}/*"
+            Principal:
+              Service: cloudtrail.amazonaws.com
 
 
 Outputs:
@@ -63,4 +87,20 @@ Outputs:
     Value: !GetAtt CloudTrailBucket.Arn
     Export:
       Name: CloudTrailBucket
+  ArtifactsBucket:
+    Description: A reference to the ArtifactsBucket Arn
+    Value: !GetAtt ArtifactsBucket.Arn
+    Export:
+      Name: ArtifactsBucket
+  VarLogMessagesBucket:
+    Description: A reference to the VarLogMessagesBucket Arn
+    Value: !GetAtt VarLogMessagesBucket.Arn
+    Export:
+      Name: VarLogMessagesBucket
+  VarLogMessagesBucketName:
+    Description: A reference to the VarLogMessagesBucket Name
+    Value: !Ref VarLogMessagesBucket
+    Export:
+      Name: VarLogMessagesBucketName
+  
       

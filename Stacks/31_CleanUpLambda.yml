@@ -1,0 +1,85 @@
+Parameters:
+  FunctionName:
+    Description: Delete Bucket Objects and ECR Lambda Function Name
+    Type: String
+    Default: "CleanUpLambda"
+  StacksBucketName:
+    Description: Bucket Name for the Cloudformation Stacks
+    Type: String
+  CloudTrailBucketName:
+    Description: Bucket Name for the CloudTrail
+    Type: String
+  ArtifactsBucketName:
+    Description: Bucket Name for Artifacts Stages Transitions
+    Type: String
+  VarLogMessagesBucketName:
+    Description: Bucket Name for VarLogMessages
+    Type: String
+  ECRRepoName:
+    Description: ECR Repo Name
+    Type: String
+
+Resources:
+  CleanUp:
+    Type: Custom::CleanUp
+    Properties:
+      ServiceToken: !GetAtt CleanUpLambda.Arn
+      StacksBucketName: !Ref StacksBucketName
+      CloudTrailBucketName: !Ref CloudTrailBucketName
+      ArtifactsBucketName: !Ref ArtifactsBucketName
+      VarLogMessagesBucketName: !Ref VarLogMessagesBucketName
+      ECRRepoName: !Ref ECRRepoName
+  
+  CleanUpLambda:
+     Type: AWS::Lambda::Function
+     Properties:
+       Description: "Delete all Object in S3 Buckets and Clear ECR"
+       FunctionName: !Ref FunctionName
+       Handler: index.handler
+       Role: !ImportValue CleanUpLambdaRole
+       Timeout: 360
+       Runtime: python3.8
+       Code:
+         ZipFile: |
+          import boto3
+          import cfnresponse
+          ### cfnresponse module help in sending responses to CloudFormation
+          ### instead of writing your own code
+
+          def handler(event, context):
+            # Get request type
+            the_event = event['RequestType']        
+            print("The event is: ", str(the_event))
+
+            response_data = {}
+            s3_Resource = boto3.resource('s3')
+            s3_Client = boto3.client('s3')
+            ecr_Client = boto3.client('ecr')
+
+            StacksBucketName = str(event['ResourceProperties']['StacksBucketName'])
+            CloudTrailBucketName = str(event['ResourceProperties']['CloudTrailBucketName'])
+            ArtifactsBucketName = str(event['ResourceProperties']['ArtifactsBucketName'])
+            VarLogMessagesBucketName = str(event['ResourceProperties']['VarLogMessagesBucketName'])
+            ECRRepoName = str(event['ResourceProperties']['ECRRepoName'])
+
+            try:
+              if the_event == 'Delete':
+                print("Deleting", StacksBucketName, "content...")
+                s3_Resource.Bucket(StacksBucketName).objects.all().delete()
+                print("Deleting", CloudTrailBucketName, "bucket...")
+                s3_Resource.Bucket(CloudTrailBucketName).objects.all().delete()
+                print("Deleting", ArtifactsBucketName, "bucket...")
+                s3_Resource.Bucket(ArtifactsBucketName).objects.all().delete()
+                print("Deleting", VarLogMessagesBucketName, "bucket...")
+                s3_Resource.Bucket(VarLogMessagesBucketName).objects.all().delete()
+                print("Deleting", ECRRepoName, "repo...")
+                ecr_Client.delete_repository(repositoryName=ECRRepoName, force=True)
+
+              # Everything OK... send the signal back
+              print("Execution succesfull!")
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
+            except Exception as e:
+              print("Execution failed...")
+              print(str(e))
+              response_data['Data'] = str(e)
+              cfnresponse.send(event, context, cfnresponse.FAILED, response_data)

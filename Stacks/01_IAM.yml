@@ -23,11 +23,11 @@ Resources:
             Action:
               - kinesis:PutRecord
             Resource: '*'
-  CloudTrailDeliveryStreamRole:
+  DeliveryStreamRole:
     Type: AWS::IAM::Role
     Properties:
       Path: /
-      RoleName: CloudTrailDeliveryStream-Role
+      RoleName: DeliveryStream-Role
       AssumeRolePolicyDocument:
         Statement:
         - Effect: Allow
@@ -43,6 +43,7 @@ Resources:
               - kinesis:*
               - s3:*
               - cloudwatch:*
+              - lambda:*
             Resource: '*'
   NATRole:
     Type: AWS::IAM::Role
@@ -90,6 +91,7 @@ Resources:
               - dynamodb:*
               - kms:*
               - cloudwatch:PutMetricData
+              - kinesis:*
               - logs:PutLogEvents
               - logs:DescribeLogStreams
               - logs:DescribeLogGroups
@@ -124,6 +126,7 @@ Resources:
               - ecs:StartTelemetrySession
               - ecs:Submit*
               - cloudwatch:PutMetricData
+              - kinesis:*
               - logs:PutLogEvents
               - logs:DescribeLogStreams
               - logs:DescribeLogGroups
@@ -183,6 +186,8 @@ Resources:
           - Action:
             - logs:CreateLogStream
             - logs:PutLogEvents
+            - s3:*
+            - cloudtrail:*
             Effect: Allow
             Resource: "*"
 
@@ -377,11 +382,11 @@ Resources:
             - elasticloadbalancing:DeregisterTargets
             Effect: Allow
             Resource: "*" 
-
-  CodeCommitToS3LambdaRole:
+  
+  InsertVarLogMessagesLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: CodeCommitToS3Lambda-Role
+      RoleName: InsertVarLogMessagesLambdaRole
       Path: /
       AssumeRolePolicyDocument:
         Statement:
@@ -390,23 +395,16 @@ Resources:
             Service: [lambda.amazonaws.com]
           Action: ['sts:AssumeRole']
       Policies:
-      - PolicyName: CodeCommitToS3Lambda-policy
+      - PolicyName: InsertVarLogMessagesLambdaRole-policy
         PolicyDocument:
           Statement:
             - Effect: Allow
               Action: 
-                - codecommit:*
-                - codepipeline:*
                 - s3:*
-                - logs:PutLogEvents
-                - logs:DescribeLogStreams
-                - logs:DescribeLogGroups
+                - dynamodb:*
                 - logs:CreateLogGroup
                 - logs:CreateLogStream
-                - logs:GetLogEvents
-                - events:DescribeRule
-                - events:ListTargetsByRule
-                - events:ListRuleNamesByTarget
+                - logs:PutLogEvents
               Resource: "*"
   
   DetectDriftedStacksLambdaRole:
@@ -428,10 +426,10 @@ Resources:
               Action: "*"
               Resource: "*"
 
-  DeleteBucketObjectsLambdaRole:
+  CleanUpLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: DeleteBucketObjectsLambda-Role
+      RoleName: CleanUpLambda-Role
       Path: /
       AssumeRolePolicyDocument:
         Statement:
@@ -440,7 +438,7 @@ Resources:
             Service: [lambda.amazonaws.com]
           Action: ['sts:AssumeRole']
       Policies:
-      - PolicyName: DeleteBucketObjectsLambda-policy
+      - PolicyName: CleanUpLambda-policy
         PolicyDocument:
           Statement:
             - Effect: Allow
@@ -448,7 +446,29 @@ Resources:
                 - logs:CreateLogGroup
                 - logs:CreateLogStream
                 - logs:PutLogEvents
-                - s3:*
+                - s3:DeleteObject
+                - ecr:DeleteRepository
+              Resource: "*"
+
+  FirehoseDataTransformationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: FirehoseDataTransformationLambda-Role
+      Path: /
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: FirehoseDataTransformationLambda-policy
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Action: 
+                - kinesis:*
+                - logs:*
               Resource: "*"
         
 Outputs:
@@ -497,16 +517,11 @@ Outputs:
     Value: !GetAtt CodeDeployRole.Arn
     Export:
       Name: CodeDeployRole
-  CodeCommitToS3LambdaRole:
-    Description: A reference to the Codeformation Role
-    Value: !GetAtt CodeCommitToS3LambdaRole.Arn
+  DeliveryStreamRole:
+    Description: A reference to the Delivery Stream Role
+    Value: !GetAtt DeliveryStreamRole.Arn
     Export:
-      Name: CodeCommitToS3LambdaRole
-  CloudTrailDeliveryStreamRole:
-    Description: A reference to the CloudTrail Delivery Stream Role
-    Value: !GetAtt CloudTrailDeliveryStreamRole.Arn
-    Export:
-      Name: CloudTrailDeliveryStreamRole
+      Name: DeliveryStreamRole
   CloudWatchToKinesisRole:
     Description: A reference to the CloudWatch To Kinesis Role
     Value: !GetAtt CloudWatchToKinesisRole.Arn
@@ -517,9 +532,19 @@ Outputs:
     Value: !GetAtt DetectDriftedStacksLambdaRole.Arn
     Export:
       Name: DetectDriftedStacksLambdaRole
-  DeleteBucketObjectsLambdaRole:
-    Description: A reference to the Delete Bucket Objects Lambda Role
-    Value: !GetAtt DeleteBucketObjectsLambdaRole.Arn
+  CleanUpLambdaRole:
+    Description: A reference to the Delete Bucket Objects and ECR Lambda Role
+    Value: !GetAtt CleanUpLambdaRole.Arn
     Export:
-      Name: DeleteBucketObjectsLambdaRole
+      Name: CleanUpLambdaRole
+  FirehoseDataTransformationLambdaRole:
+    Description: A reference to the Firehose Data Transformation Lambda Role
+    Value: !GetAtt FirehoseDataTransformationLambdaRole.Arn
+    Export:
+      Name: FirehoseDataTransformationLambdaRole
+  InsertVarLogMessagesLambdaRole:
+    Description: A reference to the Insert VarLogMessages Lambda Role
+    Value: !GetAtt InsertVarLogMessagesLambdaRole.Arn
+    Export:
+      Name: InsertVarLogMessagesLambdaRole
 
